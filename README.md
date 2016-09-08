@@ -1,10 +1,33 @@
-# opener_server.pl opener_server 标准的Perl实现。
+# opener_server.pl 是opener_server 标准的Perl实现。
 
 ### API描述
 ```perl
-1. 首先你必须有一个http server 的实现。这个http server 的实现可以提供http api以管理自己。
-2. 管理自己的模式为ajax模式post json字符串到url地址的/op下。
-json字符串为：{action:'',reg_startup:""}
+
+* 管理接口为https下的ajax模式，post到 json字符串到url地址的/op下。
+例如jquery方式：
+$.ajax({
+		  url: https://192.168.3.133:10008,
+		  cache: false,
+		  headers: {
+			  opener_flag:"opener"
+		  },
+		  data: {"action":"","reg_startup":""},
+		  type: 'POST',
+		  dataType: 'json',
+		  success: function(data){
+			if (data.result=='ok')
+			{	
+				success(data);			
+			}else{
+				console.log('error');
+			}
+		  },
+		  error: function(dd,mm){
+			console.log('error:'+dd+mm);
+			}
+	});
+
+json字符串基本格式为：{action:'',reg_startup:""}
 ### reg_startup为真的话，当前动作插入到启动菜单中。如果进程的autorun为真，则进程启动的时候，自动运行这些reg_startup为真的动作。
 ### reg_startup的动作先执行，最后容器运行的时候先执行。
 
@@ -22,8 +45,8 @@ json字符串为：{action:'',reg_startup:""}
 {action:'reg_url',url:"",host:'*:*',type:'html5_file_post',go:""} ### 指定host上的url为html5的文件 post上方式的请求。使用ajax post模式上传大的文件。上传成功后调用go
 {action:'remote_reg_url',remote_url:"",url:"",host:'*:*',type:'',go:""} ### 从远程url地址中取回需要reg的go内容，然后执行reg_url操作
 
-{action:'new_http_server',port:'',host:''} ###在端口 port ，ip地址 host上按照http server的模式监听。
-{action:'new_https_server',port:'',host:'',cert_file:''} ###在端口 port ，ip地址 host上按照https server的模式监听，并配置一个证书：cert_file，证书文件和当前进程在同一个地址。
+{action:'new_http_server',port:'',host:''} ###在端口为port、ip地址为host上启动一个http server。
+{action:'new_https_server',port:'',host:'',cert_file:''} ###在端口为port 、ip地址为host上启动一个https server，并配置一个证书：cert_file，证书文件和当前opener_server.pl进程在同一个目录下。
 {action:'list_url',host:""} ###列出当前进程的该host下所有注册url地址，
 {action:'del_url',url:"",host:""} ### 删掉一个host下的注册url
 {action:'list_server'} ### 列出当前进程内的所有 服务列表。
@@ -37,7 +60,7 @@ json字符串为：{action:'',reg_startup:""}
 {action:'start_worker',port:"",autorun:""} ### 开启一个新的进程容器，指定这个容器的管理端口是port, autorun来决定这个新的进程容器是否随最初的管理进程容器一同启动。
 {action:'stop'} ## 退出当前进程，主要用于退出当前应用程序的进程
 
-3. 默认的管理端口上的http server均为https模式。
+3. 默认的管理端口上的http server均为https模式，默认使用opener.pem的证书文件。这个证书文件可以自生成。
 4. 管理的时候，需要在http header中添加一个 opener_flag 字段，字段内容用来鉴定该请求是否为认证的请求。
 5. 发送管理请求后的返回结果：
 {url:'/op',result:'error',action:"",reason:""} ### 操作错误返回
