@@ -1,4 +1,5 @@
-# opener_server.pl 是opener_server 标准的Perl实现。
+# opener_server.pl 是opener_server 标准的Perl实现。（本文档依旧在编写中...）
+
 
 ### API描述
 ```perl
@@ -83,5 +84,12 @@ json字符串基本格式为：{action:'',reg_startup:""}
 
 * util\create_pem.sh 是生成pem文件的脚步。 在运行Opener_server.pl 之前，需要运行一下：bash create_pem.sh opener 
 在根目录下生成一个opener.pem
+
+
+### *下载：* 
+1. Open Source：
+2. virtualbox image：
+3. 树莓派的image:
+
 
 
