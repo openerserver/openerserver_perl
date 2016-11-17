@@ -1,4 +1,58 @@
-# opener_server.pl 是opener_server 标准的Perl实现。（本文档依旧在编写中...）
+# 本文档依旧在编写中...）
+# opener_server.pl 是opener_server 容器标准的Perl实现。
+
+opener_server.pl默认启动就是一个https服务器，监听在默认端口10008上，使用opener.pem证书文件。
+
+该https服务器提供了一些基本的api，让你可以做到以下事情：
+* 指定一个端口，启动一个新的http或者https服务器
+* 停止在某个端口上运行的http或者https服务器
+* 建立一个文件浏览的url地址，并把它挂到某个端口与域名上
+* 建立一个目录浏览的url地址，并把它挂到某个端口与域名上
+* 建立一个单文件下载的url地址，并把它挂到某个端口与域名上
+* 建立一个根目录(让所有找不到的文件，最后去这个根目录查找)，并把它挂到某个端口与域名上
+* 建立一个上传的url地址，并把它挂到某个端口与域名上
+* 建立一个HTTP GET模式的url，然后绑定一段代码来处理这个GET请求，并把它挂到某个端口与域名上
+* 建立一个HTTP POST模式的url，然后绑定一段代码来处理这个GET请求，并把它挂到某个端口与域名上
+
+### 运行参数
+
+perl opener_server.pl 10008 0
+第一个参数：10008(默认值)代表：opener_server.pl 的管理端口为10008，启动一个Https服务在10008端口并使用默认的opener.pem证书文件。
+第二个参数：0 代表：不自动运行配置文件中的代码；1（默认值）：代表自动运行配置文件中的代码。
+
+### 运行所需要perl模块
+
+#### 以下为必须额外安装的库文件
+JSON::XS (提供json解析、封装功能)
+AnyEvent (必须安装, 提供异步非阻塞模式)
+EV  (必须安装, 提供异步非阻塞模式)
+HTTP::Parser2::XS (必须安装, 提供http头解析功能)
+URI::Escape::XS (必须安装, 提供url解析及封装)
+IO::All (必须安装, 提供文件操作功能)
+AnyEvent::Fork  (必须安装, 提供生成新进程功能)
+LWP::MediaTypes (必须安装, 提供http文档类型解析功能)
+AnyEvent::HTTP (必须安装, 提供http客户端功能)
+
+#### 以下为 需要 安装的库文件（在其他的程序中可能使用到）
+Digest::SHA1
+DBD::SQLite 
+Storable::AMF
+Geo::IP::PurePerl
+IP::QQWry
+DateTime
+String::Random
+Email::Valid
+Net::DNS
+IO::Pty
+Net::SSLeay
+Net::DNS::ToolKit
+App::cpanminus
+Net::Frame::Layer::DNS
+Simple::IPInfo
+Crypt::Passwd::XS
+Net::Ifconfig::Wrapper
+Net::IPAddress::Util
+Net::Ping
 
 
 ### API描述
