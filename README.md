@@ -101,22 +101,22 @@ $.ajax({
 ```
 json字符串基本格式为：{action:"",reg_startup:""}  
 
-. 发送管理请求后的返回结果：  
+* 发送管理请求后的返回结果：  
 {url:'/op',result:'error',action:"",reason:""} ### 操作错误，reason代表错误原因。  
 {url:'/op',result:'ok',action:""}    ### 操作正确  
 
-. action字段代表：不同的请求。  
-. reg_startup字段代表：是否将该action注册到启动列表中。
+* action字段代表：不同的请求。  
+* reg_startup字段代表：是否将该action注册到启动列表中。  
   为 1 的话，当前action插入到启动列表中。先插入先执行  
   为-1 的话，则从服务器端删掉这条注册的action  
   为 0 的话（默认值），不注册这个action。  
-  reg_startup请求有重复，重复则放弃本次reg_startup注册。
+  reg_startup请求有重复，重复则放弃本次reg_startup注册。  
   当注入的启动代码重复的时候，返回错误，并不予以注入。  
 
 json字符串中特殊格式为：{action:"",reg_startup:"",ready:""}  
-. ready字段为真时代表：当前请求完成后，再执行下面的action请求; 默认为假，所有的action请求，可以同步发送到服务器端。 
-. 因为很多时候，action的请求需要有先后顺序，例如你注入一段代码以后，才可能执行这段代码中的sub，所以必须等待前面的action完成  
-. ready字段不属于OPener_Server标准协议，所以不发送到opener_server。只是一个在客户端发起的时候告诉客户端如何处理这些action的一个字段。
+* ready字段为真时代表：当前请求完成后，再执行下面的action请求; 默认为假，所有的action请求，可以同步发送到服务器端。 
+* 因为很多时候，action的请求需要有先后顺序，例如你注入一段代码以后，才可能执行这段代码中的sub，所以必须等待前面的action完成  
+* ready字段不属于OPener_Server标准协议，所以不发送到opener_server。只是一个在客户端发起的时候告诉客户端如何处理这些action的一个字段。  
 
 ##### 安全问题
 在ajax_post的时候，必须加入一个http header：opener_flag，用来鉴定此次请求是否安全。  
