@@ -1,11 +1,11 @@
-# 本文档依旧在编写中...）
+# 本文档依旧在编写中...
 # opener_server.pl 是opener_server 容器标准的Perl实现。
 
 opener_server.pl默认启动就是一个https服务器，监听在默认端口10008上，使用opener.pem证书文件。
 
 该https服务器提供了一些基本的api，让你可以做到以下事情：
 * 指定一个端口，启动一个新的http或者https服务器
-* 停止在某个端口上运行的http或者https服务器
+* 停止在某个端口上运行的http或者https服务器  
 
 * 建立一个文件浏览的url地址，并把它挂到某个端口与域名上
 * 建立一个目录浏览的url地址，并把它挂到某个端口与域名上
@@ -13,11 +13,21 @@ opener_server.pl默认启动就是一个https服务器，监听在默认端口10
 * 建立一个根目录(让所有找不到的文件，最后去这个根目录查找)，并把它挂到某个端口与域名上
 * 建立一个上传的url地址，用来处理html5模式下的文件上传，然后绑定一段代码来处理这个GET请求，并把它挂到某个端口与域名上
 * 建立一个HTTP GET模式的url，然后绑定一段代码来处理这个GET请求，并把它挂到某个端口与域名上
-* 建立一个HTTP POST模式的url，用来处理ajax post上来的数据，然后绑定一段代码来处理这个POST请求，并把它挂到某个端口与域名上。
-* 建立一个HTTP POST模式的url，用来处理form post上来的数据，然后绑定一段代码来处理这个POST请求，并把它挂到某个端口与域名上。
+* 建立一个HTTP POST模式的url，用来处理ajax post上来的数据，然后绑定一段代码来处理这个POST请求，并把它挂到某个端口与域名上
+* 建立一个HTTP POST模式的url，用来处理form post上来的数据，然后绑定一段代码来处理这个POST请求，并把它挂到某个端口与域名上  
 
+* 注入一段代码，直接在opener_server的perl环境里运行
+* 从远端的http服务器上取回一段代码，，直接在opener_server的perl环境里运行
+* 指定一个管理端口，启动一个新的opener_server.pl进程。
+* 退出当期的opener_server.pl进程
+* 启动一个新perl进程，直接执行一段脚本内容。
+* 启动一个新perl进程，直接执行一段远端http服务器上的脚本内容。
 
-### 运行参数
+### 运行方法与运行参数
+
+第一次开始运行前，请先使用util/create_pem.sh脚本随机生成一个opener.pem证书文件。  
+opener.pem证书文件也可以自己申请：内容是先私有证书，再公共颁发的证书，再中间证书（如果有的话），再CA的根证书。  
+生成opener.pem后，就可以直接用perl来运行opener_server.pl  
 
 perl opener_server.pl 10008 0  
 第一个参数：10008(默认值)代表：opener_server.pl 的管理端口为10008，启动一个Https服务在10008端口并使用默认的opener.pem证书文件。  
