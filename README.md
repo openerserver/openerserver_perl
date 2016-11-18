@@ -29,16 +29,17 @@ opener_server.pl 默认启动就是一个https服务器，使用opener.pem证书
 ### 运行方法与运行参数
 
 1. 第一次开始运行前，请先使用util/create_pem.sh脚本随机生成一个opener.pem证书文件。  
-⋅⋅* opener.pem证书文件也可以自己申请：内容是先私有证书，再公共颁发的证书，再中间证书（如果有的话），再CA的根证书。  
-⋅⋅* 生成opener.pem后，就可以直接用perl来运行opener_server.pl  
+   运行方式：bash create_pem.sh opener 
+   opener.pem证书文件也可以自己申请：内容是先私有证书，再公共颁发的证书，再中间证书（如果有的话），再CA的根证书。  
+   生成opener.pem后，就可以直接用perl来运行opener_server.pl  
 
 2. perl opener_server.pl 10008 0  
-⋅⋅* 第一个参数：10008(默认值)代表：opener_server.pl 的管理端口为10008，启动一个Https服务在10008端口并使用默认的opener.pem证书文件。  
-⋅⋅* 第二个参数：0 代表：不自动运行配置文件中的代码；1（默认值）：代表自动运行配置文件中的代码。  
+   第一个参数：10008(默认值)代表：opener_server.pl 的管理端口为10008，启动一个Https服务在10008端口并使用默认的opener.pem证书文件。  
+   第二个参数：0 代表：不自动运行配置文件中的代码；1（默认值）：代表自动运行配置文件中的代码。  
 
 ### 运行所需要perl模块
 
-#### 以下为必须额外安装的库文件
+##### 以下为必须额外安装的库文件
 JSON::XS (提供json解析、封装功能)  
 AnyEvent (必须安装, 提供异步非阻塞模式)  
 EV  (必须安装, 提供异步非阻塞模式)  
@@ -50,7 +51,7 @@ LWP::MediaTypes (必须安装, 提供http文档类型解析功能)
 AnyEvent::HTTP (必须安装, 提供http客户端功能)  
 Net::SSLeay (必须安装, 提供ssl\tls加密解密功能)  
 
-#### 以下为 需要 安装的库文件（在其他的程序中可能使用到）
+##### 以下为 需要 安装的库文件（在其他的程序中可能使用到）
 Digest::SHA1  
 DBD::SQLite   
 Storable::AMF  
@@ -77,7 +78,7 @@ Net::Ping
 * 管理接口为https下的ajax模式，post到 json字符串到url地址的/op下。
 例如jquery方式：
 $.ajax({
-		  url: https://192.168.3.133:10008,
+		  url: https://192.168.3.133:10008/op,
 		  cache: false,
 		  headers: {
 			  opener_flag:"opener"
@@ -98,7 +99,13 @@ $.ajax({
 			}
 	});
 
+
 json字符串基本格式为：{action:'',reg_startup:""}
+
+##### 安全问题
+在ajax_post的时候，必须加入一个http header：opener_flag，用来鉴定此次请求是否安全。
+opener_server.pl 的默认 opener_flag是opener
+
 ### reg_startup为真的话，当前动作插入到启动菜单中。如果进程的autorun为真，则进程启动的时候，自动运行这些reg_startup为真的动作。
 ### reg_startup的动作先执行，最后容器运行的时候先执行。
 
@@ -146,13 +153,13 @@ json字符串基本格式为：{action:'',reg_startup:""}
 ```
 
 ### 文件列表：
-* Opener_Server.pl 是Opener_Server 容器标准的Perl实现。
+* opener_Server.pl 是OPener_Server 容器标准的Perl实现。
 
-* Opener.pem 是opener_server.pl https管理端口需要的证书文件。
+* opener.pem 是opener_server.pl的https管理端口需要的证书文件。
 
-* util\perl_setup.sh 是 perl 运行环境设置工具。在运行Opener_server.pl之前，必须运行。
+* util\perl_setup.sh 是 perl 运行环境安装脚本。在运行opener_server.pl之前，必须运行。
 
-* util\create_pem.sh 是生成pem文件的脚步。 在运行Opener_server.pl 之前，需要运行一下：bash create_pem.sh opener 
+* util\create_pem.sh 是生成pem证书文件的脚本。 在运行opener_server.pl 之前，需要运行一下：bash create_pem.sh opener 
 在根目录下生成一个opener.pem
 
 
