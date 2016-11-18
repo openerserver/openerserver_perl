@@ -1,12 +1,11 @@
 # 本文档依旧在编写中...
 # opener_server.pl 是opener_server 容器标准的Perl实现。
 
-opener_server.pl默认启动就是一个https服务器，监听在默认端口10008上，使用opener.pem证书文件。
+opener_server.pl默认启动就是一个https服务器，监听在默认端口10008上，使用opener.pem证书文件。  
 
 该https服务器提供了一些基本的api，让你可以做到以下事情：
 * 指定一个端口，启动一个新的http或者https服务器
 * 停止在某个端口上运行的http或者https服务器  
-
 * 建立一个文件浏览的url地址，并把它挂到某个端口与域名上
 * 建立一个目录浏览的url地址，并把它挂到某个端口与域名上
 * 建立一个单文件下载的url地址，并把它挂到某个端口与域名上
@@ -15,7 +14,6 @@ opener_server.pl默认启动就是一个https服务器，监听在默认端口10
 * 建立一个HTTP GET模式的url，然后绑定一段代码来处理这个GET请求，并把它挂到某个端口与域名上
 * 建立一个HTTP POST模式的url，用来处理ajax post上来的数据，然后绑定一段代码来处理这个POST请求，并把它挂到某个端口与域名上
 * 建立一个HTTP POST模式的url，用来处理form post上来的数据，然后绑定一段代码来处理这个POST请求，并把它挂到某个端口与域名上  
-
 * 注入一段代码，直接在opener_server的perl环境里运行
 * 从远端的http服务器上取回一段代码，，直接在opener_server的perl环境里运行
 * 指定一个管理端口，启动一个新的opener_server.pl进程。
