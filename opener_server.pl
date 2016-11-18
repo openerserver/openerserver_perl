@@ -1,10 +1,46 @@
 #!/usr/bin/perl
 
+## 2012-02-27 完成vpn服务器的监听工作，可以通过ajax_post建立，删除，更新vpn帐号。
+## 2012-01-03 服务器默认只处理utf8的数据。
+## 2011-12-24 开始编写
+## 2012-01-13 继续编写，在一个星期之前，基本完成了http的基本功能，现在添加的是动态增加http处理方法。
+## 2013-01-12 11:40  管理的端口：28500. 等待接入，接入点方式：http协议，协议头有opener_flag=>'alexe' 标志。
+## 2013-02-07 基本写完了所有功能。包括了pptp登录数据的收集，提供接口可以关闭任意一个pptp连接。
+## 还添加了ping接口，测试到服务器的速度，还有speedtest接口，测试下载速度。
+## 更新了http server的基本功能，添加了*:28000 这样的url接口，更加灵活。可以一个server建立多个socket listen，然后不同的listen对于不同的url处理。
+## 2013-03-11 添加了一个report_speed，report_ping功能。主要用于记录用户每次做速度测试的结果。
+## 2014-04-09 更新数据的路径，放置到/etc/openervpn 下面
+## 2014/4/13 端口10000正式用来对所有用户开放。一个用来用户查询自己的账号。 
+## 2014/4/15 关于流量，应该查询用户的所有上行与下行流量的总和。
+
+## 2015-01-26 正式停止，更名为opener_server.pl 以后更新都在opener_server.pl
+
+## 2015-03-23 实际运行中发现，各个程序之间还是需要隔离。因此添加子进程部分。每个子进程有单独的管理端口。
+## 缺省子进程管理端口：10008
+
+## 2015-04-09 更改ajax_post form_post html5_file_post的参数顺序,从data,r,key 改为r,key,data。这样统一所有的样式。
+## 2015/7/31 在reg_startup中添加了md5校验功能，发现重复的reg，然后省略掉。
+
+## 2016-04-27 更改了file_root 类型的匹配。url:* 代表最后的匹配，去go指定的目录中找文件。
+
+## 2016-07-12 更新了reg_url 时的eval问题，不再总是重复eval代码导致内存泄漏。
+
+## 2016-08-09 修正了$n->{process_http_request} 中 $r->{_uri} 带 http:// 的情况，主要用于http proxy 
+## 还有 $r->{_uri}='/' 时，无法匹配到'/*'的问题。
+
+## 2016-08-22 添加reg_startup=-1 选项，去删除该启动选项。 reg_startup=1 为添加启动选项
+
+## 2016-09-17 对于 $n->{send_resp}->($r,$key,{}) 不用使用encode_json, 可以直接传递 一个hash指针
+## 2016-09-20 修正了开启https时远程下载cert_file的问题。现在程序内没有阻塞，主要由于condvar不能再内嵌阻塞。以后整个程序不能阻塞。
+##  https://www.aa.com/ssl_pem_down?opener=14124&file=ovpn_in.pem  中opener代表用户的id，从而去找到自己的file来下载。
+## opener_flag集中到了$self->{default_server_config}->{opener_flag}. 作为客户端发起请求时，如果没有传递，就用默认的。
+
+
 use strict;
-our $VERSION=1.0;
+our $VERSION=0.1;
 
 use Data::Dumper;
-use EV;
+#use EV;
 use AnyEvent;
 
 use AnyEvent::Handle;
@@ -12,12 +48,17 @@ use AnyEvent::Socket;
 use AnyEvent::Util;
 use LWP::MediaTypes qw(guess_media_type);
 use JSON::XS;
+#use IO::Uncompress::Gunzip qw(gunzip $GunzipError) ;
+#use IO::Compress::Gzip qw(gzip $GzipError) ;
 use HTTP::Parser2::XS;
 use IO::All;
 use Encode qw/encode decode encode_utf8 decode_utf8/;
 use URI::Escape::XS qw/encodeURIComponent decodeURIComponent/;
 use Cwd;
 use AnyEvent::HTTP;
+#use Linux::Inotify2;
+#my $inotify = new Linux::Inotify2  or die "unable to create new inotify object: $!";
+#use Devel::Size qw(size total_size);
 use AnyEvent::Fork;
 use Digest::MD5 qw(md5 md5_hex md5_base64);
 
@@ -111,7 +152,7 @@ $n->{new_http_server}=sub {
 	return 1;
 };
 $n->{new_https_server}=sub {
-	my($server_host,$server_port,$cert_file,$timeout,$max_form_data)=@_;
+	my($server_host,$server_port,$cert_file,$timeout,$max_form_data,$ok_run,$err_run)=@_;
 	unless ($timeout) {
 		$timeout=$self->{default_server_config}->{timeout};
 	}
@@ -121,27 +162,27 @@ $n->{new_https_server}=sub {
 	unless ($server_host) {
 		$server_host=undef;
 	}
-	if ($cert_file=~/^http(.*)\?opener(.*)\&file=(.*)/) { ### https://www.aa.com/ssl_pem_down?opener=14124&file=ovpn_in.pem  必须这个结构
+	if ($cert_file=~/$self->{default_server_config}->{cert_remote_url}/) { ### https://www.aa.com/ssl_pem_down?opener=14124&file=ovpn_in.pem  必须这个结构
 		my $ssl_file=$3;
-		my $cc= AnyEvent->condvar; ### 这里下载证书，并阻断并不是最佳方案。 以后可以考虑去除，全部以消息推送来传递消息。
-		$cc->begin;
 		$n->{http_download}->($cert_file,$ssl_file,sub{
 			if ($_[0]) {
+				$n->{logs}->("down $cert_file ok");
 				unless ($n->{create_http_server}->($server_host,$server_port,$ssl_file,$timeout,$max_form_data)) {
-					$cc->send(0);
+					$n->{logs}->("create_https_server error");
+					$err_run->();
 				}else{
-					$cc->send(1);
+					$n->{logs}->("create_https_server ok");
+					$ok_run->();
 				}
 		   } elsif (defined $_[0]) {
 			  $n->{logs}->('please retry later $cert_file');
-			  $cc->send(0);
+			 $err_run->();
 		   } else {
 			   $n->{logs}->("$cert_file not exists");
-			  $cc->send(0);
+			  $err_run->();
 		   }
 		});
-		my $results =$cc->recv;
-		return $results;
+		return -1;
 	}else{
 		if (-e $cert_file) {
 			unless ($n->{create_http_server}->($server_host,$server_port,$cert_file,$timeout,$max_form_data)) {
@@ -166,6 +207,8 @@ $n->{create_http_server}=sub{
 	if ($@) {
 		$n->{logs}->("Dup port for http server:$server_host,$server_port");
 		return 0;
+	}else{
+		$n->{logs}->("create server: $server_host,$server_port,$ssl,$timeout,$max_form_data ok");
 	}
 	return 1;
 };
@@ -258,7 +301,7 @@ $n->{process_http_request}=sub {
 	}else{
 		$host="$host:$port";
 	}
-#	$n->{logs}->($r->{_uri});
+#	$n->{logs}->($host);
 	if (substr($r->{_uri},0,7) eq 'http://') {
 		$r->{_proxy_url}=$r->{_uri};
 		my $hh=length $r->{host}->[0];
@@ -637,6 +680,9 @@ $n->{send_resp}=sub { ### 可以 设置 mime type
 	$hdr->{'Cache-Control'} = "max-age=0";
 
 	$type ? $hdr->{'Content-Type'} = $type : $hdr->{'Content-Type'} = 'text/html; charset=utf8';
+	if (ref($data) eq 'HASH') {### $data是 一个hash指针, 转换成数据
+		$data=encode_json($data);
+	}
 	$hdr->{'Content-Length'} = length $data;
 
 	while (my ($h, $v) = each %$hdr) {
@@ -813,8 +859,10 @@ $n->{on_disconnect}=sub {
 
 ### {action=>'code',code=>''}
 ### {action=>'reg_url',go=>''}
-### {action=>'new_http_server',port=>'',host=>''}
-### {action=>'new_https_server',port=>'',host=>'',cert_file=>}
+### {action=>'new_http_server',ip=>'',host=>''}
+### {action=>'new_https_server',ip=>'',host=>'',cert_file=>}
+### {action=>'get_logs',id=>''}
+
 $n->{op_sub}=sub {
 	my ($r,$key,$data)=@_;	
 	unless ($n->{http_sec}->($r,$key)) {
@@ -823,7 +871,7 @@ $n->{op_sub}=sub {
 	
 	eval{$data=decode_json($data)};
 	if ($@) {
-		$n->{send_resp}->($r,$key,encode_json {url=>'/op',result=>'error',reason=>"Post data error"});
+		$n->{send_resp}->($r,$key, {url=>'/op',result=>'error',reason=>"Post data error"});
 		return 0;
 	}
 	unless ($data->{action} eq 'get_logs') { ### get_logs 记录不输出，防止不断查询记录的时候总是输出这个get_logs
@@ -834,12 +882,12 @@ $n->{op_sub}=sub {
 		my $return;
 		eval $data->{code};
 		if ($@) {
-			$n->{send_resp}->($r,$key,encode_json {url=>'/op',action=>'code',result=>'error',reason=>"code error:$@"});	
+			$n->{send_resp}->($r,$key, {url=>'/op',action=>'code',result=>'error',reason=>"code error:$@"});	
 		}else{
 			unless ($n->{reg_startup}->($data)) {
-				$n->{send_resp}->($r,$key,encode_json {url=>'/op',result=>'error',action=>'code',reason=>"dup code"});
+				$n->{send_resp}->($r,$key, {url=>'/op',result=>'error',action=>'code',reason=>"dup code"});
 			}else{
-				$n->{send_resp}->($r,$key,encode_json {url=>'/op',result=>'ok',action=>'code','return'=>$return});
+				$n->{send_resp}->($r,$key, {url=>'/op',result=>'ok',action=>'code','return'=>$return});
 			}
 		}
 	}elsif ($data->{action} eq 'reg_url') {
@@ -853,7 +901,7 @@ $n->{op_sub}=sub {
 			$n->{reg_url}->({config=>$data->{config},url=>$data->{url},host=>$data->{host},type=>$data->{type},go=>$data->{go}});
 		}else{
 			unless ($data->{go}) {
-				$n->{send_resp}->($r,$key,encode_json {result=>'error',url=>'/op',reason=>'no go data',action=>'reg_url'});
+				$n->{send_resp}->($r,$key, {result=>'error',url=>'/op',reason=>'no go data',action=>'reg_url'});
 				return 0;
 			}
 			my $code;
@@ -862,9 +910,9 @@ $n->{op_sub}=sub {
 			$n->{reg_url}->({config=>$data->{config},url=>$data->{url},host=>$data->{host},type=>$data->{type},code=>$data->{go},go=>$code});
 		}
 		unless ($n->{reg_startup}->($data)) {
-			$n->{send_resp}->($r,$key,encode_json {url=>'/op',result=>'error',action=>'reg_url',reason=>"dup code",reg_url=>$data->{url},host=>$data->{host},type=>$data->{type}});
+			$n->{send_resp}->($r,$key, {url=>'/op',result=>'error',action=>'reg_url',reason=>"dup code",reg_url=>$data->{url},host=>$data->{host},type=>$data->{type}});
 		}else{
-			$n->{send_resp}->($r,$key,encode_json {url=>'/op',result=>'ok',action=>'reg_url',reg_url=>$data->{url},host=>$data->{host},type=>$data->{type}});
+			$n->{send_resp}->($r,$key, {url=>'/op',result=>'ok',action=>'reg_url',reg_url=>$data->{url},host=>$data->{host},type=>$data->{type}});
 		}
 	}elsif ($data->{action} eq 'list_url') {
 		my $ss;
@@ -876,56 +924,70 @@ $n->{op_sub}=sub {
 					$ss->{$_}={type=>$url_reg->{$data->{host}}->{$_}->{type},code=>$url_reg->{$data->{host}}->{$_}->{code}};
 				}
 			}
-			$n->{send_resp}->($r,$key,encode_json {result=>'ok',url_list=>$ss,action=>'list_url'});
+			$n->{send_resp}->($r,$key, {result=>'ok',url_list=>$ss,action=>'list_url'});
 		}else{
-			$n->{send_resp}->($r,$key,encode_json {result=>'error',reason=>'not post op_host',action=>'list_url'});
+			$n->{send_resp}->($r,$key, {result=>'error',reason=>'not post op_host',action=>'list_url'});
 		}
 	}elsif ($data->{action} eq 'del_url') {
 		if ($n->{del_url}->({url=>$data->{url},host=>$data->{host}})) {
-			$n->{send_resp}->($r,$key,encode_json {result=>'ok',url=>'/op',del_url=>$data->{url},action=>'del_url'});
+			$n->{send_resp}->($r,$key, {result=>'ok',url=>'/op',del_url=>$data->{url},action=>'del_url'});
 		}else{
-			$n->{send_resp}->($r,$key,encode_json {result=>'error',url=>'/op',reason=>'no found',action=>'del_url'});
+			$n->{send_resp}->($r,$key, {result=>'error',url=>'/op',reason=>'no found',action=>'del_url'});
 		}
 	}elsif ($data->{action} eq 'new_http_server') {
 		$n->{reg_startup}->($data); ## 暂时不提示是否重复注册，因为下面有端口检测，如果端口已经被使用，靠下面的提示
-		if (exists $self->{daemon}->{"$data->{host},$data->{port}"}) {
-			$n->{send_resp}->($r,$key,encode_json {url=>'/op',result=>'error',action=>'new_http_server',reason=>"$data->{host},$data->{port} has been used"});
+		if (exists $self->{daemon}->{"$data->{ip},$data->{port}"}) {
+			$n->{send_resp}->($r,$key, {url=>'/op',result=>'error',action=>'new_http_server',reason=>"$data->{ip},$data->{port} has been used"});
 		}else{
-			if ($n->{new_http_server}->($data->{host},$data->{port},$data->{timeout},$data->{max_form_data})) {
-				$n->{send_resp}->($r,$key,encode_json {url=>'/op',result=>'ok',action=>'new_http_server',port=>$data->{port}});
+			if ($n->{new_http_server}->($data->{ip},$data->{port},$data->{timeout},$data->{max_form_data})) {
+				$n->{send_resp}->($r,$key, {url=>'/op',result=>'ok',action=>'new_http_server',port=>$data->{port}});
 			}else{
-				$n->{send_resp}->($r,$key,encode_json {url=>'/op',result=>'error',action=>'new_http_server',port=>$data->{port},reason=>'socket has been occupyed'});
+				$n->{send_resp}->($r,$key, {url=>'/op',result=>'error',action=>'new_http_server',port=>$data->{port},reason=>'socket has been occupyed'});
 			}
 			
 		}
 	}elsif ($data->{action} eq 'new_https_server') {
 		$n->{reg_startup}->($data);
-		if (exists $self->{daemon}->{"$data->{host},$data->{port}"}) {
-			$n->{send_resp}->($r,$key,encode_json {url=>'/op',result=>'error',action=>'new_https_server',reason=>"$data->{host},$data->{port} has been used"});
+		if (exists $self->{daemon}->{"$data->{ip},$data->{port}"}) {
+			$n->{send_resp}->($r,$key, {url=>'/op',result=>'error',action=>'new_https_server',reason=>"$data->{ip},$data->{port} has been used"});
 		}else{
-			if ($n->{new_https_server}->($data->{host},$data->{port},$data->{cert_file},$data->{timeout},$data->{max_form_data})) {
-				$n->{send_resp}->($r,$key,encode_json {url=>'/op',result=>'ok',action=>'new_https_server',port=>$data->{port}});
+			if ($data->{cert_file}=~/$self->{default_server_config}->{cert_remote_url}/) {
+				$n->{new_https_server}->($data->{ip},$data->{port},$data->{cert_file},$data->{timeout},$data->{max_form_data},
+					sub{
+						$n->{send_resp}->($r,$key, {url=>'/op',result=>'ok',action=>'new_https_server',port=>$data->{port}});},
+					sub{
+						$n->{send_resp}->($r,$key, {url=>'/op',result=>'error',action=>'new_https_server',port=>$data->{port},reason=>'socket has been occupyed'});
+					}); 
+						
 			}else{
-				$n->{send_resp}->($r,$key,encode_json {url=>'/op',result=>'error',action=>'new_https_server',port=>$data->{port},reason=>'socket has been occupyed'});
-			}			
+				if ($n->{new_https_server}->($data->{ip},$data->{port},$data->{cert_file},$data->{timeout},$data->{max_form_data})) {
+					$n->{send_resp}->($r,$key, {url=>'/op',result=>'ok',action=>'new_https_server',port=>$data->{port}});
+				}else{
+					$n->{send_resp}->($r,$key, {url=>'/op',result=>'error',action=>'new_https_server',port=>$data->{port},reason=>'socket has been occupyed'});
+				}
+			}
 		}
 	}elsif ($data->{action} eq 'list_server') {
 		my $ss=[];
 		foreach  (keys %{$self->{daemon}} ) {
 			push @$ss, $_;
 		}
-		$n->{send_resp}->($r,$key,encode_json {url=>'/op',result=>'ok',action=>'list_server',servers=>$ss});
+		$n->{send_resp}->($r,$key, {url=>'/op',result=>'ok',action=>'list_server',servers=>$ss});
 	}elsif ($data->{action} eq 'stop_server') {
-		unless ($data->{host}) {
-			$data->{host}=undef;
+		unless ($data->{ip}) {
+			$data->{ip}=undef;
 		}
-		$self->{daemon}->{"$data->{host},$data->{port}"}=undef;
-		delete $self->{daemon}->{"$data->{host},$data->{port}"};
-		$n->{send_resp}->($r,$key,encode_json {url=>'/op',result=>'ok',action=>'stop_server',port=>$data->{port}});
+		if (exists $self->{daemon}->{"$data->{ip},$data->{port}"}) {
+			$self->{daemon}->{"$data->{ip},$data->{port}"}=undef;
+			delete $self->{daemon}->{"$data->{ip},$data->{port}"};
+			$n->{send_resp}->($r,$key, {url=>'/op',result=>'ok',action=>'stop_server',port=>$data->{port}});
+		}else{
+			$n->{send_resp}->($r,$key, {url=>'/op',result=>'error',action=>'stop_server',reason=>"no server listen: $data->{ip},$data->{port}"});
+		}
 	}elsif ($data->{action} eq 'clear_startup') {
 		$self->{startup}=[];
 		$n->{write_startup}->();
-		$n->{send_resp}->($r,$key,encode_json {url=>'/op',result=>'ok',action=>'clear_startup'});
+		$n->{send_resp}->($r,$key, {url=>'/op',result=>'ok',action=>'clear_startup'});
 	}elsif ($data->{action} eq 'remote_code') {
 		my $remote_url;
 		unless ($data->{remote_url}=~/^http/) {
@@ -942,17 +1004,17 @@ $n->{op_sub}=sub {
 					eval $body;
 					if ($@) {
 						$n->{logs}->("remote read error:\n $body");
-						$n->{send_resp}->($r,$key,encode_json {url=>'/op',result=>'error',action=>'remote_code',reason=>$@});
+						$n->{send_resp}->($r,$key, {url=>'/op',result=>'error',action=>'remote_code',reason=>$@});
 						return 0;
 					}
 					unless ($n->{reg_startup}->($data)) {
-						$n->{send_resp}->($r,$key,encode_json {url=>'/op',result=>'error',action=>'remote_code',reason=>"dup code"});
+						$n->{send_resp}->($r,$key, {url=>'/op',result=>'error',action=>'remote_code',reason=>"dup code"});
 					}else{
-						$n->{send_resp}->($r,$key,encode_json {url=>'/op',result=>'ok',action=>'remote_code','return'=>$return});
+						$n->{send_resp}->($r,$key, {url=>'/op',result=>'ok',action=>'remote_code','return'=>$return});
 					}
 			   } else {
 				  $n->{logs}->("remote error, $hdr->{Status} $hdr->{Reason}\n");
-				  $n->{send_resp}->($r,$key,encode_json {url=>'/op',result=>'error',action=>'remote_code',reason=>"http error: $hdr->{Status} $hdr->{Reason}"});
+				  $n->{send_resp}->($r,$key, {url=>'/op',result=>'error',action=>'remote_code',reason=>"http error: $hdr->{Status} $hdr->{Reason}"});
 			   }
 			};		
 	}elsif ($data->{action} eq 'remote_reg_url') { ### 远程仅提供代码。配置还是跟随data一起发送。
@@ -984,21 +1046,21 @@ $n->{op_sub}=sub {
 					}
 					
 					unless ($n->{reg_startup}->($data)) {
-						$n->{send_resp}->($r,$key,encode_json {url=>'/op',result=>'error',action=>'remote_reg_url',reason=>"dup code"});
+						$n->{send_resp}->($r,$key, {url=>'/op',result=>'error',action=>'remote_reg_url',reason=>"dup code"});
 					}else{
-						$n->{send_resp}->($r,$key,encode_json {url=>'/op',result=>'ok',action=>'remote_reg_url'});
+						$n->{send_resp}->($r,$key, {url=>'/op',result=>'ok',action=>'remote_reg_url'});
 					}
 			   } else {
 				  $n->{logs}->("remote error, $hdr->{Status} $hdr->{Reason}\n");
-				  $n->{send_resp}->($r,$key,encode_json {url=>'/op',result=>'error',action=>'remote_reg_url',reason=>"http error: $hdr->{Status} $hdr->{Reason}"});
+				  $n->{send_resp}->($r,$key, {url=>'/op',result=>'error',action=>'remote_reg_url',reason=>"http error: $hdr->{Status} $hdr->{Reason}"});
 			   }
 			};		
 	}elsif ($data->{action} eq 'script') {
 		AnyEvent::Fork->new_exec->eval($data->{script},$$); ### $$传递的当前进程的id号
 		unless ($n->{reg_startup}->($data)) {
-			$n->{send_resp}->($r,$key,encode_json {url=>'/op',result=>'error',action=>'script',reason=>"dup code"});
+			$n->{send_resp}->($r,$key, {url=>'/op',result=>'error',action=>'script',reason=>"dup code"});
 		}else{
-			$n->{send_resp}->($r,$key,encode_json {url=>'/op',result=>'ok',action=>'script'});
+			$n->{send_resp}->($r,$key, {url=>'/op',result=>'ok',action=>'script'});
 		}
 	}elsif ($data->{action} eq 'remote_script') {
 		my $remote_url;
@@ -1015,14 +1077,14 @@ $n->{op_sub}=sub {
 				    $data->{script}=$body;
 					AnyEvent::Fork->new_exec->eval($data->{script},$$);
 					unless ($n->{reg_startup}->($data)) {
-						$n->{send_resp}->($r,$key,encode_json {url=>'/op',result=>'error',action=>'remote_script',reason=>"dup code"});
+						$n->{send_resp}->($r,$key, {url=>'/op',result=>'error',action=>'remote_script',reason=>"dup code"});
 					}else{
-						$n->{send_resp}->($r,$key,encode_json {url=>'/op',result=>'ok',action=>'remote_script'});
+						$n->{send_resp}->($r,$key, {url=>'/op',result=>'ok',action=>'remote_script'});
 					}
 					
 			   } else {
 				  $n->{logs}->("remote error, $hdr->{Status} $hdr->{Reason}\n");
-				  $n->{send_resp}->($r,$key,encode_json {url=>'/op',result=>'error',action=>'remote_script',reason=>"http error: $hdr->{Status} $hdr->{Reason}"});
+				  $n->{send_resp}->($r,$key, {url=>'/op',result=>'error',action=>'remote_script',reason=>"http error: $hdr->{Status} $hdr->{Reason}"});
 			   }
 			};		
 	}elsif ($data->{action} eq 'clear_all') {
@@ -1034,16 +1096,16 @@ $n->{op_sub}=sub {
 		$self->{middle_client} ={}; ## 主动连接的 客户端全部停止
 		$self->{daemon}={};  ### 启动的服务器全部停止
 		$n->{reg_url}->({url=>'/op',host=>'*:'.$self->{manager_port},type=>'ajax_post',go=>$n->{op_sub} });
-		$n->{send_resp}->($r,$key,encode_json {url=>'/op',result=>'ok',action=>'clear_all'});
+		$n->{send_resp}->($r,$key, {url=>'/op',result=>'ok',action=>'clear_all'});
 	}elsif ($data->{action} eq 'start_worker') { ### autorun =0的时候，启动进程不运行starup脚本
 		AnyEvent::Fork->new_exec->eval($self->{default_server_config}->{start_worker_script},$self->{default_server_config}->{execute_name},$self->{default_server_config}->{script_name}, $data->{port}, $data->{autorun});
 		unless ($n->{reg_startup}->($data)) {
-			$n->{send_resp}->($r,$key,encode_json {url=>'/op',result=>'error',action=>'start_worker',reason=>"dup code"});
+			$n->{send_resp}->($r,$key, {url=>'/op',result=>'error',action=>'start_worker',reason=>"dup code"});
 		}else{
-			$n->{send_resp}->($r,$key,encode_json {url=>'/op',result=>'ok',action=>'start_worker'});
+			$n->{send_resp}->($r,$key, {url=>'/op',result=>'ok',action=>'start_worker'});
 		}
 	}elsif ($data->{action} eq 'stop') {
-		$n->{send_resp}->($r,$key,encode_json {url=>'/op',result=>'ok',action=>'stop'});
+		$n->{send_resp}->($r,$key, {url=>'/op',result=>'ok',action=>'stop'});
 		$timer->{stop}= AnyEvent->timer (
 		   interval => 0.1,
 		   cb    => sub { 
@@ -1064,14 +1126,14 @@ $n->{op_sub}=sub {
 					last;
 				}
 			}
-			$n->{send_resp}->($r,$key,encode_json {url=>'/op',result=>'ok',action=>'get_logs',logs=>$ll,last_id=>$last_id});
+			$n->{send_resp}->($r,$key, {url=>'/op',result=>'ok',action=>'get_logs',logs=>$ll,last_id=>$last_id});
 		}else{
-			$n->{send_resp}->($r,$key,encode_json {url=>'/op',result=>'ok',action=>'get_logs',logs=>$self->{logs},last_id=>$last_id});
+			$n->{send_resp}->($r,$key, {url=>'/op',result=>'ok',action=>'get_logs',logs=>$self->{logs},last_id=>$last_id});
 		}
 		
 	}
 	else{
-		$n->{send_resp}->($r,$key,encode_json {url=>'/op',result=>'error',reason=>"no action",action=>$data->{action}});
+		$n->{send_resp}->($r,$key, {url=>'/op',result=>'error',reason=>"no action",action=>$data->{action}});
 	}
 };
 
@@ -1085,7 +1147,8 @@ $n->{start}=sub {
 	$self->{default_server_config}->{timeout}=30;
 	$self->{default_server_config}->{default_remote_url}='http://'.'remote.opzx.org'.'/';
 	$self->{default_server_config}->{max_form_data}=5000000;
-	$self->{default_server_config}->{opener_flag}='opener';
+	$self->{default_server_config}->{opener_flag}='alexe';
+	$self->{default_server_config}->{cert_remote_url}='^http(.*)\?opener(.*)\&file=(.*)';
 $self->{default_server_config}->{html_head}=<<'HEAD';
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"> 
 <html>
@@ -1232,16 +1295,16 @@ $n->{run_startup}=sub {
 		}
 		$n->{run_startup}->($i);
 	}elsif ($data->{action} eq 'new_http_server') {
-		unless (exists $self->{daemon}->{"$data->{host},$data->{port}"}) {
-			unless ($n->{new_http_server}->($data->{host},$data->{port},$data->{timeout},$data->{max_form_data})) {
-				$n->{logs}->("Socket:$data->{host},$data->{port} has been occupyed by other programme");
+		unless (exists $self->{daemon}->{"$data->{ip},$data->{port}"}) {
+			unless ($n->{new_http_server}->($data->{ip},$data->{port},$data->{timeout},$data->{max_form_data})) {
+				$n->{logs}->("Socket:$data->{ip},$data->{port} has been occupyed by other programme");
 			}
 		}
 		$n->{run_startup}->($i);
 	}elsif ($data->{action} eq 'new_https_server') {
-		unless (exists $self->{daemon}->{"$data->{host},$data->{port}"}) {
-			unless ($n->{new_https_server}->($data->{host},$data->{port},$data->{cert_file},$data->{timeout},$data->{max_form_data})) {
-				$n->{logs}->("Socket:$data->{host},$data->{port} has been occupyed by other programme");
+		unless (exists $self->{daemon}->{"$data->{ip},$data->{port}"}) {
+			unless ($n->{new_https_server}->($data->{ip},$data->{port},$data->{cert_file},$data->{timeout},$data->{max_form_data})) {
+				$n->{logs}->("Socket:$data->{ip},$data->{port} has been occupyed by other programme");
 			}
 		}
 		$n->{run_startup}->($i);
@@ -1361,7 +1424,7 @@ $n->{http_ajax_post}=sub{
 	}
 
 	unless ($data->{opener_flag}) {
-		$data->{opener_flag}='opener';
+		$data->{opener_flag}=$self->{default_server_config}->{opener_flag};
 	}
 	my $json_code=encode_json $data;
 	http_request
@@ -1379,7 +1442,7 @@ $n->{http_ajax_post}=sub{
 		}, 
 	  keepalive=>1,
 	  persistent=>1,  #### 默认是重用连接
-	  timeout => 30,
+	  timeout => $data->{timeout}?$data->{timeout}:30,
 	  sub {
 		 my ($body, $hdr) = @_;
 		 if ($hdr->{Status} =~ /^2/) {
