@@ -1,7 +1,7 @@
 # 本文档依旧在编写中...
-# opener_server.pl 是opener_server 容器标准的Perl实现。
+# opener_server.pl 是OPener_Server 容器标准的Perl实现
 
-opener_server.pl默认启动就是一个https服务器，监听在默认端口10008上，使用opener.pem证书文件。  
+opener_server.pl 默认启动就是一个https服务器，使用opener.pem证书文件,监听在默认端口10008上。  
 
 该https服务器提供了一些基本的api，让你可以做到以下事情：
 
@@ -28,13 +28,13 @@ opener_server.pl默认启动就是一个https服务器，监听在默认端口10
 
 ### 运行方法与运行参数
 
-第一次开始运行前，请先使用util/create_pem.sh脚本随机生成一个opener.pem证书文件。  
-opener.pem证书文件也可以自己申请：内容是先私有证书，再公共颁发的证书，再中间证书（如果有的话），再CA的根证书。  
-生成opener.pem后，就可以直接用perl来运行opener_server.pl  
+1. 第一次开始运行前，请先使用util/create_pem.sh脚本随机生成一个opener.pem证书文件。  
+⋅⋅* opener.pem证书文件也可以自己申请：内容是先私有证书，再公共颁发的证书，再中间证书（如果有的话），再CA的根证书。  
+⋅⋅* 生成opener.pem后，就可以直接用perl来运行opener_server.pl  
 
-perl opener_server.pl 10008 0  
-  第一个参数：10008(默认值)代表：opener_server.pl 的管理端口为10008，启动一个Https服务在10008端口并使用默认的opener.pem证书文件。  。
-  第二个参数：0 代表：不自动运行配置文件中的代码；1（默认值）：代表自动运行配置文件中的代码。  
+2. perl opener_server.pl 10008 0  
+⋅⋅* 第一个参数：10008(默认值)代表：opener_server.pl 的管理端口为10008，启动一个Https服务在10008端口并使用默认的opener.pem证书文件。  
+⋅⋅* 第二个参数：0 代表：不自动运行配置文件中的代码；1（默认值）：代表自动运行配置文件中的代码。  
 
 ### 运行所需要perl模块
 
