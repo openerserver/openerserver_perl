@@ -73,10 +73,11 @@ Net::Ping
 
 
 ### API描述
-```perl
 
-* 管理接口为https下的ajax模式，post到 json字符串到url地址的/op下。
+
+管理接口为https下的ajax模式，POST一个json字符串到url地址/op下。
 例如jquery方式：
+```perl
 $.ajax({
 		  url: https://192.168.3.133:10008/op,
 		  cache: false,
@@ -99,13 +100,14 @@ $.ajax({
 			}
 	});
 
-
+```
 json字符串基本格式为：{action:'',reg_startup:""}
 
 ##### 安全问题
 在ajax_post的时候，必须加入一个http header：opener_flag，用来鉴定此次请求是否安全。
 opener_server.pl 的默认 opener_flag是opener
 
+```perl
 ### reg_startup为真的话，当前动作插入到启动菜单中。如果进程的autorun为真，则进程启动的时候，自动运行这些reg_startup为真的动作。
 ### reg_startup的动作先执行，最后容器运行的时候先执行。
 
@@ -113,6 +115,7 @@ opener_server.pl 的默认 opener_flag是opener
 
 ### host："ip地址:端口号"。如果需要匹配全部则用*代替。
 ### url："/aa/11/22"。如果需要匹配全部则用*代替。
+
 {action:'reg_url',url:"",host:'*:*',type:'file',go:""}       ### 指定host上的url为单个文件的浏览，文件地址在go内
 {action:'reg_url',url:"",host:'*:*',type:'file_index',go:""} ### 指定host上的url为文件目录的浏览，目录地址在go内
 {action:'reg_url',url:"",host:'*:*',type:'file_down',go:""}  ### 指定host上的url为单个文件的下载，文件地址在go内
