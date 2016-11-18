@@ -29,7 +29,7 @@ opener_server.pl 默认启动就是一个https服务器，使用opener.pem证书
 ### 运行方法与运行参数
 
 1. 第一次开始运行前，请先使用util/create_pem.sh脚本随机生成一个opener.pem证书文件。  
-   运行方式：bash create_pem.sh opener 
+   运行方式：bash create_pem.sh opener  
    opener.pem证书文件也可以自己申请：内容是先私有证书，再公共颁发的证书，再中间证书（如果有的话），再CA的根证书。  
    生成opener.pem后，就可以直接用perl来运行opener_server.pl  
 
@@ -75,7 +75,7 @@ Net::Ping
 ### API描述
 
 
-管理接口为https下的ajax模式，POST一个json字符串到url地址/op下。
+管理接口为https下的ajax模式，POST一个json字符串到url地址/op下。  
 例如jquery方式：
 ```perl
 $.ajax({
@@ -104,8 +104,8 @@ $.ajax({
 json字符串基本格式为：{action:'',reg_startup:""}
 
 ##### 安全问题
-在ajax_post的时候，必须加入一个http header：opener_flag，用来鉴定此次请求是否安全。
-opener_server.pl 的默认 opener_flag是opener
+在ajax_post的时候，必须加入一个http header：opener_flag，用来鉴定此次请求是否安全。  
+opener_server.pl 的默认 opener_flag是opener  
 
 ```perl
 ### reg_startup为真的话，当前动作插入到启动菜单中。如果进程的autorun为真，则进程启动的时候，自动运行这些reg_startup为真的动作。
@@ -139,31 +139,30 @@ opener_server.pl 的默认 opener_flag是opener
 {action:'remote_script',remote_url:""} ### 从remote_url中取回script内容，然后启动一个新的进程
 {action:'clear_all'} ### 清除该进程内所有后添加部分，恢复到一个干净的http server 容器。
 {action:'start_worker',port:"",autorun:""} ### 开启一个新的进程容器，指定这个容器的管理端口是port, autorun来决定这个新的进程容器是否随最初的管理进程容器一同启动。
-{action:'stop'} ## 退出当前进程，主要用于退出当前应用程序的进程
+{action:'stop'}  ### 退出当前进程，主要用于退出当前应用程序的进程
 
-3. 默认的管理端口上的http server均为https模式，默认使用opener.pem的证书文件。这个证书文件可以自生成。
-4. 管理的时候，需要在http header中添加一个 opener_flag 字段，字段内容用来鉴定该请求是否为认证的请求。
-5. 发送管理请求后的返回结果：
+{action=>'get_logs',id=>''}  ### 取回当前系统的内部日志，id用来指定从该id以后的取回。
+
+. 发送管理请求后的返回结果：
 {url:'/op',result:'error',action:"",reason:""} ### 操作错误返回
 {url:'/op',result:'ok',action:""}    ### 操作正确返回
-6. {action:'new_http_server',port:'',host:'',reg_startup:'1'}客户端发送管理请求并带reg_startup>0时，需要容器检测一下本次请求是否与之前的reg_startup请求有重复。重复则放弃本次reg_startup注册。如果reg_startup为-1，则从服务器删掉这条注册。
+. {action:'new_http_server',port:'',host:'',reg_startup:'1'}客户端发送管理请求并带reg_startup>0时，需要容器检测一下本次请求是否与之前的reg_startup请求有重复。重复则放弃本次reg_startup注册。如果reg_startup为-1，则从服务器删掉这条注册。
 
-7. 客户端发送请求到容器时，需要满足两种形式：
+. 客户端发送请求到容器时，需要满足两种形式：
 . 请求正常情况必须是并发请求。
 . 当需要的时候，可以阻塞，等待前一个执行的结果返回后，再继续执行。
-8. 可以任意启动一个http 或者https服务器
-9. 当注入的启动代码重复的时候，返回错误，并不予以注入。
+. 当注入的启动代码重复的时候，返回错误，并不予以注入。
+
 ```
 
 ### 文件列表：
-* opener_Server.pl 是OPener_Server 容器标准的Perl实现。
+* opener_server.pl 是OPener_Server 容器标准的Perl实现。
 
 * opener.pem 是opener_server.pl的https管理端口需要的证书文件。
 
 * util\perl_setup.sh 是 perl 运行环境安装脚本。在运行opener_server.pl之前，必须运行。
 
-* util\create_pem.sh 是生成pem证书文件的脚本。 在运行opener_server.pl 之前，需要运行一下：bash create_pem.sh opener 
-在根目录下生成一个opener.pem
+* util\create_pem.sh 是生成pem证书文件的脚本。 方法：bash create_pem.sh opener 在根目录下生成一个opener.pem
 
 
 ### *下载：* 
