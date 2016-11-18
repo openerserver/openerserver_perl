@@ -126,9 +126,9 @@ opener_server.pl 的默认 opener_flag是opener
 ```perl
 
 ### 下面部分为 http服务器管理的api
-{action:'new_http_server',port:"",host:""} ###在端口为port、ip地址为host上启动一个http server。
-{action:'new_https_server',port:"",host:"",cert_file:""} ###在端口为port 、ip地址为host上启动一个https server，并配置一个证书：cert_file，证书文件和当前opener_server.pl进程在同一个目录下。
-{action:'stop_server',host:"",port:""} ### 停止一个 ip地址是host,端口是port的 服务。
+{action:'new_http_server',port:"",ip:""} ###在端口为port、地址为ip上启动一个http server。
+{action:'new_https_server',port:"",ip:"",cert_file:""} ###在端口为port 、地址为ip上启动一个https server，并配置一个证书：cert_file，证书文件和当前opener_server.pl进程在同一个目录下。
+{action:'stop_server',ip:"",port:""} ### 停止一个 ip地址是ip,端口是port的 服务。
 
 ### 下面部分为生成新的http api的api
 ### host："ip地址:端口号"。如果需要匹配全部则用*代替。
