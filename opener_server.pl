@@ -1,10 +1,10 @@
 #!/usr/bin/perl
 
 use strict;
-our $VERSION=1.0;
+our $VERSION=0.1;
 
 use Data::Dumper;
-use EV;
+#use EV;
 use AnyEvent;
 
 use AnyEvent::Handle;
@@ -1108,7 +1108,7 @@ $n->{start}=sub {
 	$self->{default_server_config}->{timeout}=30;
 	$self->{default_server_config}->{default_remote_url}='http://'.'remote.opzx.org'.'/';
 	$self->{default_server_config}->{max_form_data}=5000000;
-	$self->{default_server_config}->{opener_flag}='alexe';
+	$self->{default_server_config}->{opener_flag}='opener';
 	$self->{default_server_config}->{cert_remote_url}='^http(.*)\?opener(.*)\&file=(.*)';
 $self->{default_server_config}->{html_head}=<<'HEAD';
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"> 
@@ -1437,6 +1437,9 @@ $n->{http_get}=sub{
 		$cb=sub{};
 	}
 	my $opener=$data->{opener};
+	unless ($data->{opener_flag}) {
+		$data->{opener_flag}=$self->{default_server_config}->{opener_flag};
+	}
 	http_request
 	  GET    => $opener,
 	  headers => { "user-agent" => "OPener 1.0" ,opener_flag=>$data->{opener_flag}},
