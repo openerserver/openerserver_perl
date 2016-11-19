@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 use strict;
-our $VERSION=0.1;
+our $VERSION=1.0;
 
 use Data::Dumper;
 #use EV;
