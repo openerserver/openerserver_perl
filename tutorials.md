@@ -4,7 +4,7 @@
 
 用jquery：
 
-··· javascript
+```javascript
 
 var url="https://test1.openerserver.com:10008/op";
 var start_http_server="{'action':'new_http_server','ip':'','port':'1008'}";
@@ -41,7 +41,7 @@ function url_post_data(go,data){
 			}
 	});
 }
-···
+```
 
 
 ## opener_server.pl 的特点：
