@@ -208,7 +208,7 @@ $config->{opener_flag}='opener';
 * opener.conf 中心配置文件。储存所有的启动代码，包括各个管理端口的。文件内容为JSON结构。opener_server.pl第一次启动会自动生成该文件。  
   例如：
   
-```json  
+```perl  
 {"10101":{"startup":[{"port":"443","reg_startup":"1","cert_file":"http://aaaa.opzx.org/ssl_pem_down?opener=1&file=test.pem","host":"","action":"new_https_server","md5":"19f3767346c32d32f1e7f49ac5de79cb"}]},"10008":{"startup":[]}}
 ### {https port->{startup->[{action=>'',md5=>''},{action=>'',md5=>''}]}} 
 ### 其中md5是opener_server.pl自动生成的，为了防止有重复的action插入（理论上，不需要重复的action插入）
