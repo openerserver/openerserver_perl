@@ -38,37 +38,37 @@ opener_server.pl 默认启动就是一个https服务器，使用opener.pem证书
 
 ### * 运行所需要perl模块
 
- ##### 以下为必须额外安装的库文件
- JSON::XS (提供json解析、封装功能)  
- AnyEvent (必须安装, 提供异步非阻塞模式)  
- EV  (必须安装, 提供异步非阻塞模式)  
- HTTP::Parser2::XS (必须安装, 提供http头解析功能)  
- URI::Escape::XS (必须安装, 提供url解析及封装)  
- IO::All (必须安装, 提供文件操作功能)  
- AnyEvent::Fork  (必须安装, 提供生成新进程功能)  
- LWP::MediaTypes (必须安装, 提供http文档类型解析功能)  
- AnyEvent::HTTP (必须安装, 提供http客户端功能)  
- Net::SSLeay (必须安装, 提供ssl\tls加密解密功能)  
+  以下为必须额外安装的库文件
+  JSON::XS (提供json解析、封装功能)  
+  AnyEvent (必须安装, 提供异步非阻塞模式)  
+  EV  (必须安装, 提供异步非阻塞模式)  
+  HTTP::Parser2::XS (必须安装, 提供http头解析功能)  
+  URI::Escape::XS (必须安装, 提供url解析及封装)  
+  IO::All (必须安装, 提供文件操作功能)  
+  AnyEvent::Fork  (必须安装, 提供生成新进程功能)  
+  LWP::MediaTypes (必须安装, 提供http文档类型解析功能)  
+  AnyEvent::HTTP (必须安装, 提供http客户端功能)  
+  Net::SSLeay (必须安装, 提供ssl\tls加密解密功能)  
 
- ##### 以下为 需要 安装的库文件（在其他的程序中可能使用到）
- Digest::SHA1  
- DBD::SQLite   
- Storable::AMF  
- Geo::IP::PurePerl  
- IP::QQWry  
- DateTime  
- String::Random   
- Email::Valid  
- Net::DNS  
- IO::Pty  
- Net::DNS::ToolKit  
- App::cpanminus  
- Net::Frame::Layer::DNS  
- Simple::IPInfo  
- Crypt::Passwd::XS  
- Net::Ifconfig::Wrapper  
- Net::IPAddress::Util  
- Net::Ping  
+  以下为 需要 安装的库文件（在其他的程序中可能使用到）
+  Digest::SHA1  
+  DBD::SQLite   
+  Storable::AMF  
+  Geo::IP::PurePerl  
+  IP::QQWry  
+  DateTime  
+  String::Random   
+  Email::Valid  
+  Net::DNS  
+  IO::Pty  
+  Net::DNS::ToolKit  
+  App::cpanminus  
+  Net::Frame::Layer::DNS  
+  Simple::IPInfo  
+  Crypt::Passwd::XS  
+  Net::Ifconfig::Wrapper  
+  Net::IPAddress::Util  
+  Net::Ping  
 
 
 ###  * 管理API描述（OPener_Server容器标准）
@@ -166,7 +166,33 @@ opener_server.pl 的默认 opener_flag是opener
 
 ```
 
-### * 注入代码说明（未完成）
+### * 如何注入代码（未完成）
+#### 以下皆为opener_server.pl 具体实现，不属于OPener_Server的标准
+
+###### reg_url部分
+
+reg_url的go字段中，注入的代码。
+基本实例：
+```perl
+	my ($r,$key,$data)=@_; ### 接收参数
+	unless ($n->{http_sec}->($r,$key)) {
+		return 0;
+	}
+	eval{$data=decode_json($data)};
+	if ($@) {
+		$n->{send_resp}->($r,$key, {type=>'/test',result=>'error',reason=>"Post data error"});
+		return 0;
+	}
+	$n->{send_resp}->($r,$key,encode_json {action=>'test',result=>'ok'});
+
+```
+
+###### code部分
+基本实例：
+```perl
+$config->{opener_flag}='opener';
+
+```
 
 
 
@@ -193,8 +219,8 @@ opener_server.pl 的默认 opener_flag是opener
 在干净的opener_server.pl情况下，其基本http性能和node.js的http服务器性能相当。
 
 
-### *下载：* 
-1. Open Source：
+### *下载：
+1. Open Source：https://github.com/openerserver/openerserver_perl/archive/master.zip
 2. virtualbox image：
 3. 树莓派的image:
 
