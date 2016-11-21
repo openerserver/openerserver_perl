@@ -7,8 +7,8 @@
 ```javascript
 
 var url="https://test1.openerserver.com:10008/op";  // 安装了opener_server的服务器地址：test1.openerserver.com 
-var start_http_server="{'action':'new_http_server','ip':'','port':'1008'}"; // 开启一个新的http服务器，监听在端口1008上
-var reg_url="{'action':'reg_url','type':'http_get','url':'/helloworld','host':'*:1008','go':"+hello_fun+"}"; 
+var start_http_server={'action':'new_http_server','ip':'','port':'1008'}; // 开启一个新的http服务器，监听在端口1008上
+var reg_url={'action':'reg_url','type':'http_get','url':'/helloworld','host':'*:1008','go':hello_fun}; 
 //注册一个url地址 /helloworld ，绑定到1008端口上，设定这个url处理模式为http get模式，最后处理这个url的代码放到 hello_fun
 
 var hello_fun=`
