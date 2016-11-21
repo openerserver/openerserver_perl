@@ -16,7 +16,8 @@ var hello_fun=`
   $n->{send_normal_resp}->($r,$key,'Hello World'); ### 发送返回，返回内容是html，加入一个hello world字符串。
 
 `;
-url_post_data(url,JSON.stringify(start_http_server));
+var opener_flag='opener'; // 设定http header中opener_flag字段，相当于访问该opener_server的密码
+url_post_data(url,JSON.stringify(start_http_server)); 
 url_post_data(url,JSON.stringify(reg_url));
 function url_post_data(go,data){
 	$.ajax({
@@ -45,5 +46,5 @@ function url_post_data(go,data){
 }
 ```
 
-在一个含有jquery代码的html页面上，执行上面的代码就可以了。
-然后访问 http://test1.openervpn.com:1008/helloworld 就可以看到结果。
+在一个含有jquery代码的html页面上，执行上面的代码就可以了。  
+然后访问 http://test1.openervpn.com:1008/helloworld 就可以看到结果。  
