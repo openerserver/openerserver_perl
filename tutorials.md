@@ -11,9 +11,8 @@ var start_http_server={'action':'new_http_server','ip':'','port':'1008'}; // 开
 var reg_url={'action':'reg_url','type':'http_get','url':'/helloworld','host':'*:1008','go':hello_fun}; 
 //注册一个url地址 /helloworld ，绑定到1008端口上，设定这个url处理模式为http get模式，最后处理这个url的代码放到 hello_fun
 
-var hello_fun=`
-  my ($r,$key)=@_; 
-  $n->{send_normal_resp}->($r,$key,'Hello Worlds'); 
+var hello_fun=`my ($r,$key)=@_; 
+$n->{send_normal_resp}->($r,$key,'Hello Worlds'); 
 
 `;
 //### 接收传入参数，$r 包含所有这个http请求相关信息，$key包含该http请求的唯一id
