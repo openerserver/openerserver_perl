@@ -78,3 +78,9 @@ my ($r,$key,$data)=@_;  ### 接收参数
 my $rr=`$data`;         ### 执行，并取得结果
 $n->{send_resp}->($r,$key,{type=>'/shell',result=>'ok',g=>$rr});  ### 通过http 返回结果
 ```
+
+测试执行效果：
+```javascript
+var url2="http://test1.openerserver.com:1009/shell"; 
+url_post_data(url2,'ls');
+```
