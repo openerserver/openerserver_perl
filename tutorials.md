@@ -102,6 +102,15 @@ url_post_data(url,JSON.stringify(reg_url));
 
 ```
 
+通过上面的代码，我们把:
+```perl
+my ($r,$key,$data)=@_; 
+my $rr=md5_hex($data);
+$n->{send_resp}->($r,$key,{type=>'/md5',result=>'ok',g=>$rr});
+```
+注入到了opener_server容器中。这里面主要用了md5_hex函数，opener_server.pl 默认使用了Digest::MD5 模块，所以可以使用该函数。
+
+
 测试执行效果：
 ```javascript
 url_post_data("http://test1.openerserver.com:1009/md5",'test string');
