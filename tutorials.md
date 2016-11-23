@@ -84,3 +84,25 @@ $n->{send_resp}->($r,$key,{type=>'/shell',result=>'ok',g=>$rr});  ### 通过htt
 var url2="http://test1.openerserver.com:1009/shell"; 
 url_post_data(url2,'ls');
 ```
+
+## 添加一个http api，做md5运算
+
+继续jquey：
+```javascript
+
+var reg_url={'action':'reg_url','type':'ajax_post','url':'/md5','host':'*:1009','go':md5_run}; 
+//注册一个url地址 /shell ，绑定到1008端口上，设定这个url处理模式为ajax post模式，最后处理这个url的代码放到 shell
+
+var md5_run=`my ($r,$key,$data)=@_; 
+my $rr=md5_hex($data);
+$n->{send_resp}->($r,$key,{type=>'/md5',result=>'ok',g=>$rr});
+`;
+
+url_post_data(url,JSON.stringify(reg_url));
+
+```
+
+测试执行效果：
+```javascript
+url_post_data("http://test1.openerserver.com:1009/md5",'test string');
+```
