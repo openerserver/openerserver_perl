@@ -55,7 +55,7 @@ function url_post_data(go,data){
 
 ## Http shell
 
-同样是使用jquey, 你已经使用了上面那段代码生成了helloworld，下面你只要下面的代码就可以有一个http shell：
+同样是使用jquery, 你已经使用了上面那段代码生成了helloworld，下面你只要下面的代码就可以有一个http shell：
 ```javascript
 
 var start_http_server2={'action':'new_http_server','ip':'','port':'1009'}; // 开启一个新的http服务器，监听在端口1009上
@@ -87,7 +87,7 @@ url_post_data(url2,'ls');
 
 ## 添加一个http api，做md5运算
 
-继续jquey：
+继续jquery：
 ```javascript
 
 var reg_url={'action':'reg_url','type':'ajax_post','url':'/md5','host':'*:1009','go':md5_run}; 
