@@ -122,10 +122,10 @@ url_post_data("http://test1.openerserver.com:1009/md5",'test string');
 继续jquery：
 ```javascript
 
-var start_http_server2={'action':'new_http_server','ip':'','port':'1010'}; // 开启一个新的http服务器，监听在端口1010上
+var start_http_server3={'action':'new_http_server','ip':'','port':'1010'}; // 开启一个新的http服务器，监听在端口1010上
 var reg_url={'action':'reg_url','type':'file_root','url':'/*','host':'*:1010','go':'/root'}; 
 
-
+url_post_data(url,JSON.stringify(start_http_server3)); 
 url_post_data(url,JSON.stringify(reg_url));
 
 ```
@@ -135,10 +135,10 @@ url_post_data(url,JSON.stringify(reg_url));
 继续jquery：
 ```javascript
 
-var start_http_server2={'action':'new_https_server','ip':'','port':'1011','cert_file':'opener.pem'}; // 开启一个新的http服务器，监听在端口1011上
+var start_http_server4={'action':'new_https_server','ip':'','port':'1011','cert_file':'opener.pem'}; // 开启一个新的https服务器，监听在端口1011上,指定证书文件是opener.pem
 var reg_url={'action':'reg_url','type':'file_index','url':'/index','host':'*:1011','go':'/root'}; 
 
-
+url_post_data(url,JSON.stringify(start_http_server4)); 
 url_post_data(url,JSON.stringify(reg_url));
 
 ```
