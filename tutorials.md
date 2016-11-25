@@ -115,3 +115,30 @@ $n->{send_resp}->($r,$key,{type=>'/md5',result=>'ok',g=>$rr});
 ```javascript
 url_post_data("http://test1.openerserver.com:1009/md5",'test string');
 ```
+
+
+## 启动一个http 服务器，并设定一个根目录
+
+继续jquery：
+```javascript
+
+var start_http_server2={'action':'new_http_server','ip':'','port':'1010'}; // 开启一个新的http服务器，监听在端口1010上
+var reg_url={'action':'reg_url','type':'file_root','url':'/*','host':'*:1010','go':'/root'}; 
+
+
+url_post_data(url,JSON.stringify(reg_url));
+
+```
+
+## 启动一个https 服务器，并设定一个可浏览目录
+
+继续jquery：
+```javascript
+
+var start_http_server2={'action':'new_https_server','ip':'','port':'1011','cert_file':'opener.pem'}; // 开启一个新的http服务器，监听在端口1011上
+var reg_url={'action':'reg_url','type':'file_index','url':'/index','host':'*:1011','go':'/root'}; 
+
+
+url_post_data(url,JSON.stringify(reg_url));
+
+```
