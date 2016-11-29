@@ -1,0 +1,25 @@
+NAME
+    opener_server.pl - http container.
+VERSION
+    This document describes  opener_server.pl released on 2016-11-29
+
+SYNOPSIS
+	 perl opener_server.pl 10008 0
+   Start a https server which listen on 10008 with built-in api.
+   0 means not autorun code in opener.conf.
+
+DESCRIPTION
+    opener_server.pl is a http container. It's the implement of OPener_Server protocol.
+    It aims to quick run code with http server. 
+    You can injection any code to a http server to get any function you want.
+    You can connect programme lannguange with http.
+    
+AUTHOR
+    
+    Larry Wang "<a at openerserver.com>"
+
+License
+    The Apache License
+    Version 2.0, January 2004
+    http://www.apache.org/licenses/
+
