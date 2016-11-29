@@ -4,12 +4,8 @@ abstract: 'Http Container for run any code with http server'
 version: 1.0
 author:
   - 'Larry Wang <a@openerserver.com>'
-distribution_type: script
+distribution_type: app
 license: Apache License
-no_index:
-  file: opener_server.pl
-  directory:
-    - util
 requires:
   AnyEvent: 0
   EV: 0
@@ -22,6 +18,7 @@ requires:
   AnyEvent::Fork: 0
   Digest::MD5: 0
   perl: 5.16.3
+dynamic_config: 0
 resources:
   license: http://www.apache.org/licenses/
 meta-spec:
