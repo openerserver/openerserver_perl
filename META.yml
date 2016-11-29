@@ -1,0 +1,30 @@
+---
+name: opener_server.pl
+abstract: 'Http Container for run any code with http server'
+version: 1.0
+author:
+  - 'Larry Wang <a@openerserver.com>'
+distribution_type: script
+license: Apache License
+no_index:
+  file: opener_server.pl
+  directory:
+    - util
+requires:
+  AnyEvent: 0
+  EV: 0
+  LWP::MediaTypes: 0
+  JSON::XS: 0
+  HTTP::Parser2::XS: 0
+  IO::All: 0
+  URI::Escape::XS: 0
+  AnyEvent::HTTP: 0
+  AnyEvent::Fork: 0
+  Digest::MD5: 0
+  perl: 5.16.3
+resources:
+  license: http://www.apache.org/licenses/
+meta-spec:
+  url: http://module-build.sourceforge.net/META-spec-v1.4.html
+  version: 1.4
+generated_by: 'Module::Install version 0.77'
