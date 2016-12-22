@@ -1,7 +1,8 @@
 #!/usr/bin/perl
 
+
 use strict;
-our $VERSION=1.0;
+our $VERSION=1.1;
 
 use Data::Dumper;
 #use EV;
@@ -36,19 +37,19 @@ if (defined $AnyEvent::MODEL) {
 
 my $cvar = AnyEvent->condvar;
 my $self={};
-my $g={}; ## 外部程序的function
+my $g={}; ### the function pointer of injection code 
 $self->{out_function}=\$g;
 
-my $n={}; ## 内部程序的function
+my $n={}; ### the function pointer of opener_server.pl inner
 $self->{in_function}=\$n;
 
 my $config={};
-$self->{out_config}=\$config; ## 外部程序的 配置
+$self->{out_config}=\$config; ### the config of injection code
 
-my $timer={}; ## 外部计时器
+my $timer={}; ### the timer of injection code
 $self->{out_timer}=\$timer;
 
-my $url_reg={}; ### url 注册列表
+my $url_reg={}; ### the register url list 
 $self->{url_reg}=\$url_reg;
 
 my $http_header_split="\015\012\015\012";
@@ -123,7 +124,7 @@ $n->{new_https_server}=sub {
 	unless ($server_host) {
 		$server_host=undef;
 	}
-	if ($cert_file=~/$self->{default_server_config}->{cert_remote_url}/) { ### https://www.aa.com/ssl_pem_down?opener=14124&file=ovpn_in.pem  必须这个结构
+	if ($cert_file=~/$self->{default_server_config}->{cert_remote_url}/) { ### https://www.aa.com/ssl_pem_down?opener=14124&file=ovpn_in.pem  must be this structure
 		my $ssl_file=$3;
 		$n->{http_download}->($cert_file,$ssl_file,sub{
 			if ($_[0]) {
@@ -186,9 +187,9 @@ $n->{handle_http_server_data}=sub {
 		server_port=>$server_port,
 		client_ip=>$host,
 		client_port=>$port,
-#		autocork=>1,  ## wait for a little time before send.
+#		autocork=>1,  ### wait for a little time before send.
 		keepalive=>1,
-#		($cert_file? (tls => "accept", tls_ctx =>{cert_file=>$cert_file,prepare=>sub{Net::SSLeay::CTX_set_read_ahead ($_[0]->ctx, 0)}}): ()), ### CTX_set_read_ahead 设置提前读入的值为0
+#		($cert_file? (tls => "accept", tls_ctx =>{cert_file=>$cert_file,prepare=>sub{Net::SSLeay::CTX_set_read_ahead ($_[0]->ctx, 0)}}): ()), ### CTX_set_read_ahead must be 0
 		($cert_file? (tls => "accept", tls_ctx =>{cert_file=>$cert_file}): ()), 
 		on_error => sub {
 			my ($hdl, $fatal, $msg) = @_;
@@ -202,7 +203,7 @@ $n->{handle_http_server_data}=sub {
 			  sub {
 				my ($hdl, $data) = @_;
 				my $r={};
-				$r->{_header}=$data; ### header中不包含双回车换行
+				$r->{_header}=$data; ### header not contain double return
 				$data.=$http_header_split;
 				my $rv = parse_http_request($data, $r);
 				if ($rv == -1 ||$rv == -2) {
@@ -219,9 +220,9 @@ $n->{handle_http_server_data}=sub {
 	);
 };
 
-### url 匹配顺序 先找host:port，然后找*.host:port, 然后*:port，最后找*:*
-### $r->{_uri} 以/ 开头
-### $r->{_uri}先精确匹配，然后匹配带 /*的 url_reg数据，例如：$r->{_uri}= /aa/bb/cc ,url_reg->{$host}->{'/aa/*'} ,最后就会匹配这个。
+### "host" match sequence: host:port > *.host:port > *:port >*:*
+### url should beginning with "/"
+### "url" match sequence: /aa/bb/cc > /aa/* > /* 
 
 $n->{process_http_request}=sub {
 	my $r=shift;
@@ -232,14 +233,14 @@ $n->{process_http_request}=sub {
 		unless ($port) {
 			$port=$self->{server}->{$key}->{server_port};
 		}
-	}else{ ### 代表这个是https代理服务器的connect 通道请求
+	}else{ ### for https proxy's connect channel request
 		$host='*';
 		$port=$self->{server}->{$key}->{server_port};
 		$r->{_uri}='/*';
 	}
 	
 #	$n->{logs}->("$host,$port");
-	unless (exists $url_reg->{"$host:$port"}) { ## 如果没有明确的host 定义的话
+	unless (exists $url_reg->{"$host:$port"}) {
 		
 		my @aa=split('\.',$host); 
 		my $f=0;
@@ -256,7 +257,7 @@ $n->{process_http_request}=sub {
 			if (exists $url_reg->{'*:'.$port}) {
 				$host='*:'.$port;
 			}else{
-				$host='*:*'; ### 默认，缺省的地址，必须存
+				$host='*:*'; ### default
 				}
 		}
 	}else{
@@ -278,15 +279,15 @@ $n->{process_http_request}=sub {
 		my @bb=split('/',$r->{_uri});
 		my @cc;
 		while (@bb) {
-			my $h=join('/',@bb).'/*'; ### url_reg的时候必须加/*, 才能代表匹配下面所有的数据
+			my $h=join('/',@bb).'/*'; ### when url_reg, it must be "/*" and can match all
 			if (exists $url_reg->{$host}->{$h}) {
-				$r->{_uri}="/".join('/',@cc); ### 将$r->{_uri} 重新更改为匹配后面剩余的部分。
+				$r->{_uri}="/".join('/',@cc); 
 				$n->{process_uri}->($h,$r,$key,$host);
 				return 1;
 			}
 			unshift @cc,pop @bb;
 		}
-		if (exists $url_reg->{$host}->{'/*'}) { ### 专门用来匹配 '/*'
+		if (exists $url_reg->{$host}->{'/*'}) { ### for match "/*"
 			$n->{process_uri}->('/*',$r,$key,$host);
 			return 1;
 		}
@@ -323,15 +324,15 @@ $n->{process_uri}=sub {
 			$n->{on_disconnect}->($key);
 		}
 		return 1;
-	}elsif ($url_reg->{$host}->{$uri}->{type} eq 'file_down') {  ### 单个文件的下载
+	}elsif ($url_reg->{$host}->{$uri}->{type} eq 'file_down') { ### single file download
 		$n->{send_file}->($url_reg->{$host}->{$uri}->{go},$r,$key,1);
-	}elsif($url_reg->{$host}->{$uri}->{type} eq 'file') {  ### 单个文件的浏览
+	}elsif($url_reg->{$host}->{$uri}->{type} eq 'file') {  ### single file display
 		$n->{send_file}->($url_reg->{$host}->{$uri}->{go},$r,$key);
-	}elsif($url_reg->{$host}->{$uri}->{type} eq 'file_index') {  ### 文件目录的浏览
+	}elsif($url_reg->{$host}->{$uri}->{type} eq 'file_index') { ### dir display
 		$n->{send_file_index}->($url_reg->{$host}->{$uri}->{go},$r,$key);
-	}elsif($url_reg->{$host}->{$uri}->{type} eq 'file_root') {  ### 根目录
+	}elsif($url_reg->{$host}->{$uri}->{type} eq 'file_root') {  ### root dir
 		my $file=$url_reg->{$host}->{$uri}->{go}.$r->{_uri};
-		if (-d $file) {	 ### 如果给定的$r->{_uri} 为一个目录，则返回该目录下的index.html文件，否则返回错误。
+		if (-d $file) {	### if "go" is dir, it return index.html by default
 			if (-e $file.'\index.html') {
 				$n->{send_file}->($file.'\index.html',$r,$key);
 			}else{
@@ -343,7 +344,7 @@ $n->{process_uri}=sub {
 		else{
 			$n->{send_response_error}->($r,$key,'404','not found:'.$r->{_request_uri});
 		}
-	}elsif($url_reg->{$host}->{$uri}->{type} eq 'http_get') {  ### 普通的get处理。用于常用的get一个虚拟地址，返回处理好的数据
+	}elsif($url_reg->{$host}->{$uri}->{type} eq 'http_get') {  ### handle http get
 		if (exists $r->{_query_string}) {
 			foreach my $e (split('&',$r->{_query_string})) {
 				my($k,$v)=split('=',$e);
@@ -351,11 +352,11 @@ $n->{process_uri}=sub {
 			}
 		}
 		$url_reg->{$host}->{$uri}->{go}->($r,$key);
-	}elsif($url_reg->{$host}->{$uri}->{type} eq 'form_post' && $r->{_method} eq 'POST') { ### form的post 处理
+	}elsif($url_reg->{$host}->{$uri}->{type} eq 'form_post' && $r->{_method} eq 'POST') { ### handle form post
 		$n->{form_post}->($url_reg->{$host}->{$uri}->{go},$r,$key);
-	}elsif($url_reg->{$host}->{$uri}->{type} eq 'html5_file_post' && $r->{_method} eq 'POST') { ###针对html5的文件上传。使用ajax post模式上传文件。上传成功后调用go
+	}elsif($url_reg->{$host}->{$uri}->{type} eq 'html5_file_post' && $r->{_method} eq 'POST') { ### handle html5 file upload. it use ajax post to upload file. when it success, run "go"
 		$n->{html5_file_post}->($url_reg->{$host}->{$uri}->{go},$r,$key);
-	}elsif($url_reg->{$host}->{$uri}->{type} eq 'ajax_post' && $r->{_method} eq 'POST') { ###普通的ajax的post处理
+	}elsif($url_reg->{$host}->{$uri}->{type} eq 'ajax_post' && $r->{_method} eq 'POST') { ### handle ajax post
 		$n->{ajax_post}->($url_reg->{$host}->{$uri}->{go},$r,$key);
 	}else{
 		$n->{logs}->("$key no uri process:$uri,$url_reg->{$host}->{$uri}->{type}");
@@ -387,11 +388,11 @@ $n->{html5_file_post}=sub {  ### html5 file upload
 			my $filename=$n->{put_local_name}->($r->{file_name}->[0]);
 			if ($r->{startflag}->[0]) { ### start upload, send file info.
 				unless (-e $filename) { ### create file, pre write file.
-					if ($r->{file_size}->[0]>30000000000) { ## max up load 30G file
+					if ($r->{file_size}->[0]>30000000000) { ### max up load 30G file
 						$n->{send_response_error}->($r,$key,'404','up file size too bigger 30G');
 						return 0;
 					}
-					if ($r->{file_split}->[0]<100000) { ## the smallest split: 100k
+					if ($r->{file_split}->[0]<100000) { ### the smallest split: 100k
 						$n->{send_response_error}->($r,$key,'404','file split too small');
 						return 0;
 					}
@@ -439,11 +440,11 @@ $n->{html5_file_post}=sub {  ### html5 file upload
 };
 
 $n->{form_post}=sub {
-	## post small data to server include small file upload.
+	### post small data to server include small file upload.
 	### post form: multipart/form-data x-www-form-urlencoded
 	### if upload size upto max_form_data, the process is bad;
 	my ($go,$r,$key)=@_;
-	if ($r->{_content_length}>$self->{server}->{$key}->{max_form_data} || $r->{_content_length} <1) { ## max upload file:2M
+	if ($r->{_content_length}>$self->{server}->{$key}->{max_form_data} || $r->{_content_length} <1) { ### max upload file:2M
 		$n->{send_response_error}->($r,$key,'404','File upload size max:2M or size=2');
 		return 0;
 	}
@@ -580,7 +581,7 @@ $n->{send_file_index}=sub {
 	my ($go,$r,$key)=@_;
 	if (-d $go) {
 		my ($a,$location,$content);
-		if ($r->{_query_string}) {  ## 如何处理 ?aa=ss 这样的参数，这里有实例
+		if ($r->{_query_string}) {  ### how to process the http parameter like ?aa=ss. it store in $r->{_query_string}
 			($a,$location)=split('=',$r->{_query_string});
 		}
 		$location=decodeURIComponent($location);
@@ -589,7 +590,7 @@ $n->{send_file_index}=sub {
 		}
 		my $dest=$go.$location;
 		if (-d $dest) {
-			my $body='<h3>'.'<a href="'.$r->{_uri}.'">ROOT</a>'; ## file list header
+			my $body='<h3>'.'<a href="'.$r->{_uri}.'">ROOT</a>'; ### file list header
 			my $con;
 			foreach  (split('/',$location)) {
 				$con.=encodeURIComponent($_);
@@ -625,7 +626,7 @@ $n->{send_file_index}=sub {
 	}
 };
 
-$n->{send_resp}=sub { ### 可以 设置 mime type
+$n->{send_resp}=sub { ### it could setup mime type with last type
 	my ($r,$key,$data,$type)=@_;
 	my $res = "$r->{_protocol} 200 OK\015\012";
 	my $hdr={};
@@ -641,7 +642,7 @@ $n->{send_resp}=sub { ### 可以 设置 mime type
 	$hdr->{'Cache-Control'} = "max-age=0";
 
 	$type ? $hdr->{'Content-Type'} = $type : $hdr->{'Content-Type'} = 'text/html; charset=utf8';
-	if (ref($data) eq 'HASH') {### $data是 一个hash指针, 转换成数据
+	if (ref($data) eq 'HASH') { ### $data is hash pointer, encode it to json data
 		$data=encode_json($data);
 	}
 	$hdr->{'Content-Length'} = length $data;
@@ -694,7 +695,7 @@ $n->{send_normal_resp}=sub {
 };
 
 $n->{send_response_error}=sub {
-    my ($r, $key, $code, $content) = @_;		## only code must be input
+    my ($r, $key, $code, $content) = @_; ### only code must be input
     my $msg;
 	my $hdr={};
 	if ($code eq '404') {
@@ -810,13 +811,13 @@ $n->{on_disconnect}=sub {
 };
 
 
-# example:
-#$n->{reg_url}->({url=>'/file',host=>'*:*',type=>'file',go=>'C:\workspace\pjscrape.rar'});
-#$n->{reg_url}->({url=>'/test',host=>'*:*',type=>'file',go=>'test.html'});
-#$n->{reg_url}->({url=>'/index',host=>'*:*',type=>'file_index',go=>'.'}); ### 索引一个目录，并显示，可以点击这个目录下的所有文件，可以下载。
-#$n->{reg_url}->({url=>'/down',host=>'*:*',type=>'file_down',go=>'down.html'});
-#$n->{reg_url}->({url=>'/cc/*',host=>'*:*',type=>'file_root',go=>'c:\'});
-#$n->{reg_url}->({url=>'/*',host=>'*:*',type=>'file_root',go=>'.'});
+### example:
+### $n->{reg_url}->({url=>'/file',host=>'*:*',type=>'file',go=>'C:\workspace\pjscrape.rar'});
+### $n->{reg_url}->({url=>'/test',host=>'*:*',type=>'file',go=>'test.html'});
+### $n->{reg_url}->({url=>'/index',host=>'*:*',type=>'file_index',go=>'.'}); 
+### $n->{reg_url}->({url=>'/down',host=>'*:*',type=>'file_down',go=>'down.html'});
+### $n->{reg_url}->({url=>'/cc/*',host=>'*:*',type=>'file_root',go=>'c:\'});
+### $n->{reg_url}->({url=>'/*',host=>'*:*',type=>'file_root',go=>'.'});
 
 ### {action=>'code',code=>''}
 ### {action=>'reg_url',go=>''}
@@ -835,17 +836,25 @@ $n->{op_sub}=sub {
 		$n->{send_resp}->($r,$key, {url=>'/op',result=>'error',reason=>"Post data error"});
 		return 0;
 	}
-	unless ($data->{action} eq 'get_logs') { ### get_logs 记录不输出，防止不断查询记录的时候总是输出这个get_logs
+	unless ($data->{action} eq 'get_logs') { ### when get_logs action, it not record self.
 		$n->{logs}->(Dumper $data);
 	}
 	
+	if ($data->{reg_default_startup}) {
+		unless ($n->{reg_startup}->($data,'default_startup')) {
+			$n->{send_resp}->($r,$key, {url=>'/op',result=>'error',reg_default_startup=>1,reason=>"dup code"});
+		}else{
+			$n->{send_resp}->($r,$key, {url=>'/op',result=>'ok',reg_default_startup=>1});
+		}
+		return 1;
+	}
 	if ($data->{action} eq 'code') {
 		my $return;
 		eval $data->{code};
 		if ($@) {
 			$n->{send_resp}->($r,$key, {url=>'/op',action=>'code',result=>'error',reason=>"code error:$@"});	
 		}else{
-			unless ($n->{reg_startup}->($data)) {
+			unless ($n->{reg_startup}->($data,'startup')) {
 				$n->{send_resp}->($r,$key, {url=>'/op',result=>'error',action=>'code',reason=>"dup code"});
 			}else{
 				$n->{send_resp}->($r,$key, {url=>'/op',result=>'ok',action=>'code','return'=>$return});
@@ -870,7 +879,7 @@ $n->{op_sub}=sub {
 			eval $ss;
 			$n->{reg_url}->({config=>$data->{config},url=>$data->{url},host=>$data->{host},type=>$data->{type},code=>$data->{go},go=>$code});
 		}
-		unless ($n->{reg_startup}->($data)) {
+		unless ($n->{reg_startup}->($data,'startup')) {
 			$n->{send_resp}->($r,$key, {url=>'/op',result=>'error',action=>'reg_url',reason=>"dup code",reg_url=>$data->{url},host=>$data->{host},type=>$data->{type}});
 		}else{
 			$n->{send_resp}->($r,$key, {url=>'/op',result=>'ok',action=>'reg_url',reg_url=>$data->{url},host=>$data->{host},type=>$data->{type}});
@@ -896,7 +905,7 @@ $n->{op_sub}=sub {
 			$n->{send_resp}->($r,$key, {result=>'error',url=>'/op',reason=>'no found',action=>'del_url'});
 		}
 	}elsif ($data->{action} eq 'new_http_server') {
-		$n->{reg_startup}->($data); ## 暂时不提示是否重复注册，因为下面有端口检测，如果端口已经被使用，靠下面的提示
+		$n->{reg_startup}->($data,'startup');
 		if (exists $self->{daemon}->{"$data->{ip},$data->{port}"}) {
 			$n->{send_resp}->($r,$key, {url=>'/op',result=>'error',action=>'new_http_server',reason=>"$data->{ip},$data->{port} has been used"});
 		}else{
@@ -908,7 +917,7 @@ $n->{op_sub}=sub {
 			
 		}
 	}elsif ($data->{action} eq 'new_https_server') {
-		$n->{reg_startup}->($data);
+		$n->{reg_startup}->($data,'startup');
 		if (exists $self->{daemon}->{"$data->{ip},$data->{port}"}) {
 			$n->{send_resp}->($r,$key, {url=>'/op',result=>'error',action=>'new_https_server',reason=>"$data->{ip},$data->{port} has been used"});
 		}else{
@@ -949,6 +958,10 @@ $n->{op_sub}=sub {
 		$self->{startup}=[];
 		$n->{write_startup}->();
 		$n->{send_resp}->($r,$key, {url=>'/op',result=>'ok',action=>'clear_startup'});
+	}elsif ($data->{action} eq 'clear_default_startup') {
+		$self->{default_startup}=[];
+		$n->{write_startup}->();
+		$n->{send_resp}->($r,$key, {url=>'/op',result=>'ok',action=>'clear_default_startup'});
 	}elsif ($data->{action} eq 'remote_code') {
 		my $remote_url;
 		unless ($data->{remote_url}=~/^http/) {
@@ -968,7 +981,7 @@ $n->{op_sub}=sub {
 						$n->{send_resp}->($r,$key, {url=>'/op',result=>'error',action=>'remote_code',reason=>$@});
 						return 0;
 					}
-					unless ($n->{reg_startup}->($data)) {
+					unless ($n->{reg_startup}->($data,'startup')) {
 						$n->{send_resp}->($r,$key, {url=>'/op',result=>'error',action=>'remote_code',reason=>"dup code"});
 					}else{
 						$n->{send_resp}->($r,$key, {url=>'/op',result=>'ok',action=>'remote_code','return'=>$return});
@@ -978,7 +991,7 @@ $n->{op_sub}=sub {
 				  $n->{send_resp}->($r,$key, {url=>'/op',result=>'error',action=>'remote_code',reason=>"http error: $hdr->{Status} $hdr->{Reason}"});
 			   }
 			};		
-	}elsif ($data->{action} eq 'remote_reg_url') { ### 远程仅提供代码。配置还是跟随data一起发送。
+	}elsif ($data->{action} eq 'remote_reg_url') { ### get reg url from remote http server
 		my $remote_url;
 		unless ($data->{remote_url}=~/^http/) {
 			$remote_url=$self->{default_server_config}->{default_remote_url}.$data->{remote_url};
@@ -1006,7 +1019,7 @@ $n->{op_sub}=sub {
 						$n->{reg_url}->({config=>$data->{config},url=>$data->{url},host=>$data->{host},type=>$data->{type},code=>$data->{go},go=>$code});
 					}
 					
-					unless ($n->{reg_startup}->($data)) {
+					unless ($n->{reg_startup}->($data,'startup')) {
 						$n->{send_resp}->($r,$key, {url=>'/op',result=>'error',action=>'remote_reg_url',reason=>"dup code"});
 					}else{
 						$n->{send_resp}->($r,$key, {url=>'/op',result=>'ok',action=>'remote_reg_url'});
@@ -1017,8 +1030,8 @@ $n->{op_sub}=sub {
 			   }
 			};		
 	}elsif ($data->{action} eq 'script') {
-		AnyEvent::Fork->new_exec->eval($data->{script},$$); ### $$传递的当前进程的id号
-		unless ($n->{reg_startup}->($data)) {
+		AnyEvent::Fork->new_exec->eval($data->{script},$$); ### $$ send current process id.
+		unless ($n->{reg_startup}->($data,'startup')) {
 			$n->{send_resp}->($r,$key, {url=>'/op',result=>'error',action=>'script',reason=>"dup code"});
 		}else{
 			$n->{send_resp}->($r,$key, {url=>'/op',result=>'ok',action=>'script'});
@@ -1037,7 +1050,7 @@ $n->{op_sub}=sub {
 			   if ($hdr->{Status} =~ /^2/) {
 				    $data->{script}=$body;
 					AnyEvent::Fork->new_exec->eval($data->{script},$$);
-					unless ($n->{reg_startup}->($data)) {
+					unless ($n->{reg_startup}->($data,'startup')) {
 						$n->{send_resp}->($r,$key, {url=>'/op',result=>'error',action=>'remote_script',reason=>"dup code"});
 					}else{
 						$n->{send_resp}->($r,$key, {url=>'/op',result=>'ok',action=>'remote_script'});
@@ -1049,18 +1062,18 @@ $n->{op_sub}=sub {
 			   }
 			};		
 	}elsif ($data->{action} eq 'clear_all') {
-		$g={}; ## 外部程序的function
-		$config={}; ## 配置文件
-		$timer={}; ## 外部计时器
-		$url_reg={}; ### url 注册列表
-		$self->{server}={};  ### 连接的客户端 全部断开
-		$self->{middle_client} ={}; ## 主动连接的 客户端全部停止
-		$self->{daemon}={};  ### 启动的服务器全部停止
+		$g={};
+		$config={};
+		$timer={};
+		$url_reg={};
+		$self->{server}={};
+		$self->{middle_client} ={};
+		$self->{daemon}={};
 		$n->{reg_url}->({url=>'/op',host=>'*:'.$self->{manager_port},type=>'ajax_post',go=>$n->{op_sub} });
 		$n->{send_resp}->($r,$key, {url=>'/op',result=>'ok',action=>'clear_all'});
-	}elsif ($data->{action} eq 'start_worker') { ### autorun =0的时候，启动进程不运行starup脚本
+	}elsif ($data->{action} eq 'start_worker') { ### when autorun =0, not run code in self->{starup}
 		AnyEvent::Fork->new_exec->eval($self->{default_server_config}->{start_worker_script},$self->{default_server_config}->{execute_name},$self->{default_server_config}->{script_name}, $data->{port}, $data->{autorun});
-		unless ($n->{reg_startup}->($data)) {
+		unless ($n->{reg_startup}->($data,'startup')) {
 			$n->{send_resp}->($r,$key, {url=>'/op',result=>'error',action=>'start_worker',reason=>"dup code"});
 		}else{
 			$n->{send_resp}->($r,$key, {url=>'/op',result=>'ok',action=>'start_worker'});
@@ -1070,7 +1083,7 @@ $n->{op_sub}=sub {
 		$timer->{stop}= AnyEvent->timer (
 		   interval => 0.1,
 		   cb    => sub { 
-				unless (exists $self->{server}->{$key}) { ### 等待请求的客户端退出后，再退出整个进程
+				unless (exists $self->{server}->{$key}) { ### when clients quit, then quit the process.
 					$cvar->send 
 				}
 			},
@@ -1101,14 +1114,14 @@ $n->{op_sub}=sub {
 
 $n->{reg_url}->({url=>'/op',host=>'*:'.$self->{manager_port},type=>'ajax_post',go=>$n->{op_sub} }); ### for ssl
 
-#$n->{reg_url}->({url=>'/op',host=>'*:10009',type=>'ajax_post',go=>$n->{op_sub} }); ### for normal http http暂时默认不开放
+#$n->{reg_url}->({url=>'/op',host=>'*:10009',type=>'ajax_post',go=>$n->{op_sub} }); ### for normal http. By default it be closed.
 
 $n->{start}=sub {
-	#### 改变 $self->{default_server_config} 的方式：code模块，直接修改变量即可
+	### if you want to change $self->{default_server_config} , use injection "code"
 	$self->{default_server_config}->{timeout}=30;
 	$self->{default_server_config}->{default_remote_url}='http://'.'remote.opzx.org'.'/';
 	$self->{default_server_config}->{max_form_data}=5000000;
-	$self->{default_server_config}->{opener_flag}='opener';
+	$self->{default_server_config}->{opener_flag}='alexe';
 	$self->{default_server_config}->{cert_remote_url}='^http(.*)\?opener(.*)\&file=(.*)';
 $self->{default_server_config}->{html_head}=<<'HEAD';
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"> 
@@ -1135,40 +1148,44 @@ GO
 	$self->{default_server_config}->{execute_name}=$^X;
 	$self->{default_server_config}->{script_name}=$0;
 	$self->{startup}=[];
+	$self->{default_startup}=[];
 	$n->{new_manager_server}->();
+
 	$n->{read_startup}->();
+	$n->{run_startup}->(0,'default_startup'); ### run default_startup code
 	if ($self->{autorun_startup}) {
-		$n->{run_startup}->(0);
+		$n->{run_startup}->(0,'startup');
 	}
 	
 };
 
-$n->{reg_startup}=sub {
+$n->{reg_startup}=sub { ### name can be 'startup' or 'default_startup'
 	my $data=shift;
+	my $name=shift;
 	if ($data->{reg_startup}>0) {
 		my $cal;
 		foreach  (sort keys %$data) {
 			$cal.=$_.$data->{$_};
 		}
 		$data->{md5}=md5_hex($cal);
-		foreach  (@{$self->{startup}}) {### 遍历所有的startup
+		foreach  (@{$self->{$name}}) { ### test all startup code with md5
 			if ($_->{md5} eq $data->{md5}) {
 				return 0;
 			}
 		}
-		push @{$self->{startup}},$data;
+		push @{$self->{$name}},$data;
 		$n->{write_startup}->();
 	}elsif ($data->{reg_startup}<0) {
 		my $cal;
-		$data->{reg_startup}=1; ### 修改更正一下，以找到相应的需要删除的选项。
+		$data->{reg_startup}=1; ### fix to 1 for test md5
 		foreach  (sort keys %$data) {
 			$cal.=$_.$data->{$_};
 		}
 		$data->{md5}=md5_hex($cal);
 		my $i=0;
-		foreach  (@{$self->{startup}}) {### 遍历所有的startup
+		foreach  (@{$self->{$name}}) {
 			if ($_->{md5} eq $data->{md5}) {
-				splice(@{$self->{startup}},$i,1);
+				splice(@{$self->{$name}},$i,1);
 				last;
 			}
 			$i++;
@@ -1177,6 +1194,8 @@ $n->{reg_startup}=sub {
 	}
 	return 1;
 };
+
+
 $n->{read_startup}=sub {
 
 	my $data;
@@ -1192,9 +1211,14 @@ $n->{read_startup}=sub {
 	eval{$get=decode_json($data)};
 	if ($@) {
 		$n->{logs}->("read local config error: \n $data when read_startup");
-#		return 0;
+		return 0;
 	}
-	if (exists $get->{$self->{manager_port}}) { ### 每个管理端口，代表一个单独的进程。
+	if (exists $get->{'default'}) { ### default in opener.conf
+		if (exists $get->{'default'}->{startup}) { 
+			$self->{'default_startup'}=$get->{'default'}->{startup};
+		}
+	}
+	if (exists $get->{$self->{manager_port}}) { ### every manage port represent a opener_server.pl container.
 		if (exists $get->{$self->{manager_port}}->{startup}) { 
 			$self->{startup}=$get->{$self->{manager_port}}->{startup};
 		}
@@ -1212,33 +1236,29 @@ $n->{write_startup}=sub {
 		$n->{logs}->("read local error: \n $data when write_startup");
 		return 0;
 	}
+	$store->{'default'}->{startup}=$self->{default_startup};
 	$store->{$self->{manager_port}}->{startup}=$self->{startup};
 	my $data2=encode_json($store);
 	$data2 > $io;
 	$io->unlock;
 };
 
-### remote 有两种形式：
-### 1. 直接https连接模式，将https连接存储在本地。
-### 2. 默认连接模式，提供一个字符串，将默认主域名与字符串连接，合成一个https连接。
-### remote 运行是从一个地址取回数据后，直接运行。多个地址的取回没有先后，谁先取回谁先运行。
 
-### 确保startup里面的程序，顺序执行。
-### 重复的命令可能重复运行。必须在传入以前检查。
 $n->{run_startup}=sub {
 	my $i=shift;
-	unless ($i<@{$self->{startup}}) {
+	my $name=shift;
+	unless ($i<@{$self->{$name}}) {
 		return 0;
 	}
-	my $data=$self->{startup}->[$i];
+	my $data=$self->{$name}->[$i];
 	$i++;
 	if ($data->{action} eq 'code') {
 		eval $data->{code};
 		if ($@) {
 			$n->{logs}->("$@ \n startup run code error: \n $data->{code}");
-			return 0; ### 有错误，就直接退出，不再进一步执行 startup
+			return 0; ### if it error, just quit
 		}
-		$n->{run_startup}->($i);
+		$n->{run_startup}->($i,$name);
 	}elsif ($data->{action} eq 'reg_url') {
 		if ($data->{type} eq 'file') {
 			$n->{reg_url}->({config=>$data->{config},url=>$data->{url},host=>$data->{host},type=>$data->{type},go=>$data->{go}});
@@ -1254,21 +1274,21 @@ $n->{run_startup}=sub {
 			eval $ss;
 			$n->{reg_url}->({config=>$data->{config},url=>$data->{url},host=>$data->{host},type=>$data->{type},code=>$data->{go},go=>$code});
 		}
-		$n->{run_startup}->($i);
+		$n->{run_startup}->($i,$name);
 	}elsif ($data->{action} eq 'new_http_server') {
 		unless (exists $self->{daemon}->{"$data->{ip},$data->{port}"}) {
 			unless ($n->{new_http_server}->($data->{ip},$data->{port},$data->{timeout},$data->{max_form_data})) {
 				$n->{logs}->("Socket:$data->{ip},$data->{port} has been occupyed by other programme");
 			}
 		}
-		$n->{run_startup}->($i);
+		$n->{run_startup}->($i,$name);
 	}elsif ($data->{action} eq 'new_https_server') {
 		unless (exists $self->{daemon}->{"$data->{ip},$data->{port}"}) {
 			unless ($n->{new_https_server}->($data->{ip},$data->{port},$data->{cert_file},$data->{timeout},$data->{max_form_data})) {
 				$n->{logs}->("Socket:$data->{ip},$data->{port} has been occupyed by other programme");
 			}
 		}
-		$n->{run_startup}->($i);
+		$n->{run_startup}->($i,$name);
 	}elsif ($data->{action} eq 'remote_code') {
 		my $remote_url;
 		unless ($data->{remote_url}=~/^http/) {
@@ -1286,7 +1306,7 @@ $n->{run_startup}=sub {
 						$n->{logs}->("remote read error:\n $body");
 						return 0;
 					}
-					$n->{run_startup}->($i);
+					$n->{run_startup}->($i,$name);
 			   } else {
 				  $n->{logs}->("remote error, $hdr->{Status} $hdr->{Reason}\n");
 			   }
@@ -1318,14 +1338,14 @@ $n->{run_startup}=sub {
 						eval $ss;
 						$n->{reg_url}->({config=>$data->{config},url=>$data->{url},host=>$data->{host},type=>$data->{type},code=>$data->{go},go=>$code});
 					}
-					$n->{run_startup}->($i);
+					$n->{run_startup}->($i,$name);
 			   } else {
 				  $n->{logs}->("remote error, $hdr->{Status} $hdr->{Reason}\n");
 			   }
 			};		
 	}elsif ($data->{action} eq 'script') {
 		AnyEvent::Fork->new_exec->eval($data->{script},$$);
-		$n->{run_startup}->($i);
+		$n->{run_startup}->($i,$name);
 	}elsif ($data->{action} eq 'remote_script') {
 		my $remote_url;
 		unless ($data->{remote_url}=~/^http/) {
@@ -1339,14 +1359,14 @@ $n->{run_startup}=sub {
 			   my ($body, $hdr) = @_;
 			   if ($hdr->{Status} =~ /^2/) {
 				   AnyEvent::Fork->new_exec->eval($body,$$);
-				   $n->{run_startup}->($i);
+				   $n->{run_startup}->($i,$name);
 			   } else {
 				  $n->{logs}->("remote error, $hdr->{Status} $hdr->{Reason}\n");
 			   }
 			};		
-	}elsif ($data->{action} eq 'start_worker') { ### 这里和上面的实现不一样，没有用autorun。每次自动启动新进程的时候，必须启动startup的内容。
+	}elsif ($data->{action} eq 'start_worker') {
 		AnyEvent::Fork->new_exec->eval($self->{default_server_config}->{start_worker_script},$self->{default_server_config}->{execute_name},$self->{default_server_config}->{script_name}, $data->{port});
-		$n->{run_startup}->($i);
+		$n->{run_startup}->($i,$name);
 	}
 	else{
 		$n->{logs}->("no action: $data->{action}");
@@ -1402,7 +1422,7 @@ $n->{http_ajax_post}=sub{
 		
 		}, 
 	  keepalive=>1,
-	  persistent=>1,  #### 默认是重用连接
+	  persistent=>1, ### defalut is persistent
 	  timeout => $data->{timeout}?$data->{timeout}:30,
 	  sub {
 		 my ($body, $hdr) = @_;
@@ -1562,3 +1582,169 @@ $n->{logs}=sub {
 
 $n->{start}->();
 $cvar->recv;
+
+=pod
+
+=head1 NAME
+
+opener_server.pl - Http Container for run any code with http server.
+ 
+=head1 VERSION
+ 
+Version 1.0
+
+=head1 SYNOPSIS
+ 
+ 
+    perl opener_server.pl 10008 0
+    start a https server which listen on 10008 with built-in api.
+    '0' means not autorun code in opener.conf.
+ 
+ 
+=head1 DESCRIPTION
+
+
+    opener_server.pl is a http container. It's the implement of OPener_Server protocol.
+    It aims to quick run code with http server. 
+    You can injection any code to a http server to get any function you want.
+    You can connect programme lannguange with http.
+ 
+
+=head1 Manange API
+
+=head2 http service manage
+
+	{action:'new_http_server',port:"",ip:""}
+
+start http server which listen on 'port' and 'ip'.
+	
+	{action:'new_https_server',port:"",ip:"",cert_file:""} 
+
+start https server which listen on 'port' and 'ip' with certificate file is 'cert_file'. Certificate file is same dir with opener_server.pl.
+
+	{action:'stop_server',ip:"",port:""} 
+
+stop http or https server which listen on 'port' and 'ip'.
+
+=head2 register url to get new http api
+
+Host Example: hostï¼š"127.0.0.1:80" or host: "www.aa.com:443". If you need match all, use "*". Example: host:"*.80" to match all request on 80 port.
+Url Example: urlï¼š"/aa/11/22". If you need match all, use "*". Example: url:"/aa/*". 
+
+	{action:'reg_url',url:"",host:'*:*',type:'file',go:""}
+
+reg a "url" with "host", the url point to a file where location is "go". 
+
+	{action:'reg_url',url:"",host:'*:*',type:'file_index',go:""} 
+
+reg a "url" with "host", the url point to a dir where location is "go".  The url display all files in the "go".
+
+	{action:'reg_url',url:"",host:'*:*',type:'file_down',go:""}  
+
+reg a "url" with "host", the url point to a file where location is "go". When you goto the url, browser will download the file.
+
+	{action:'reg_url',url:"*",host:'*:*',type:'file_root',go:""} 
+
+reg a "url" with "host", the url point to a dir where location is "go". When opener_server.pl can't find you requset file, it will find it in the root dir at last.
+
+	{action:'reg_url',url:"",host:'*:*',type:'http_get',go:""}   
+
+reg a "url" with "host", the url point to a function which code is in "go". The request url type is GET.
+
+	{action:'reg_url',url:"",host:'*:*',type:'form_post',go:""}  
+
+reg a "url" with "host", the url point to a function which code is in "go". The request url type is POST, it's specail for form post action.
+
+	{action:'reg_url',url:"",host:'*:*',type:'ajax_post',go:""}  
+
+reg a "url" with "host", the url point to a function which code is in "go". The request url type is POST, it's specail for ajax post action.
+
+	{action:'reg_url',url:"",host:'*:*',type:'html5_file_post',go:""} 
+
+reg a "url" with "host", the url point to a function which code is in "go". The request url type is POST, it's specail for html5 file upload action.
+
+	{action:'remote_reg_url',remote_url:"",url:"",host:'*:*',type:""} 
+
+reg a "url" with "host", the url point to a function which code is in "remote_url".
+
+
+=head2 container service manage
+
+	{action:'list_url',host:""}
+
+list all registered urls with "host".
+
+	{action:'del_url',url:"",host:""} 
+
+delete a registered "url" with "host".
+
+	{action:'list_server'} 
+
+list all start http or https service.
+
+	{action:'clear_startup'} 
+
+clear all startup code.
+
+	{action:'start_worker',port:"",autorun:""} 
+	
+start a new process with opener_server.pl. It's a clone process of opener_server.pl with manager "port". If "autorun" is true, new opener_server.pl process will run the injection startup code. 
+
+	{action:'stop'} 
+
+quit the current opener_server.pl process.
+
+	{action:'clear_all'} 
+
+clear all injection code and registered url to get a clean opener_server.pl process(not recommend).
+
+
+=head2 code injection 
+
+	{action:'code',code:""}
+
+inject "code" to current opener_server.pl container. "code" should be utf8 encoding.
+
+	{action:'remote_code',remote_url:""} 
+
+inject code to current opener_server.pl container. The code content is on a http location of "remote_url" 
+
+	{action:'script',script:""} 
+
+start a new perl process to run "script". "script" should be utf8 encoding.
+
+	{action:'remote_script',remote_url:""} 
+
+start a new perl process to run "script". The script content is on a http location of "remote_url" 
+
+=head2 Get opener_server.pl log
+
+	{action:'get_logs',id:""}
+
+Get the logs in opener_server.pl. "id" come from 0 and means get logs which more than "id".   
+
+=head2 reg startup
+
+	{action:'',reg_startup=>1}
+If reg_startup is true, this action will reg autorun with current manager port of opener_server.pl.
+
+=head2 reg default startup
+
+	{action:'',reg_default_startup=>1}
+If reg_default_startup is true, this action will reg autorun with all manager port of opener_server.pl as default run.
+
+=head1 AUTHOR
+
+    Larry Wang "<a at openerserver.com>"
+
+=head1 License
+
+    The Apache License
+    Version 2.0, January 2004
+    http://www.apache.org/licenses/
+
+=head1 WebSite
+
+    http://www.openerserver.com
+
+=cut
