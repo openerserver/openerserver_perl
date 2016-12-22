@@ -1606,6 +1606,8 @@ Version 1.0
 
     opener_server.pl is a http container. It's the implement of OPener_Server protocol.
     It aims to quick run code with http server. 
+	opener_server.pl is very simple programme. It only have one file and all code are in it.
+	It's easy to read and to be changed. You can change all by yourself.
     You can injection any code to a http server to get any function you want.
     You can connect programme lannguange with http.
  
@@ -1628,8 +1630,8 @@ stop http or https server which listen on 'port' and 'ip'.
 
 =head2 register url to get new http api
 
-Host Example: hostï¼š"127.0.0.1:80" or host: "www.aa.com:443". If you need match all, use "*". Example: host:"*.80" to match all request on 80 port.
-Url Example: urlï¼š"/aa/11/22". If you need match all, use "*". Example: url:"/aa/*". 
+Host Example: host:"127.0.0.1:80" or host: "www.aa.com:443". If you need match all, use "*". Example: host:"*.80" to match all request on 80 port.
+Url Example: url:"/aa/11/22". If you need match all, use "*". Example: url:"/aa/*". 
 
 	{action:'reg_url',url:"",host:'*:*',type:'file',go:""}
 
@@ -1682,11 +1684,7 @@ delete a registered "url" with "host".
 
 list all start http or https service.
 
-	{action:'clear_startup'} 
-
-clear all startup code.
-
-	{action:'start_worker',port:"",autorun:""} 
+	{action:'start_worker',port:"",autorun:"1"} 
 	
 start a new process with opener_server.pl. It's a clone process of opener_server.pl with manager "port". If "autorun" is true, new opener_server.pl process will run the injection startup code. 
 
@@ -1717,21 +1715,35 @@ start a new perl process to run "script". "script" should be utf8 encoding.
 
 start a new perl process to run "script". The script content is on a http location of "remote_url" 
 
+
 =head2 Get opener_server.pl log
 
 	{action:'get_logs',id:""}
 
 Get the logs in opener_server.pl. "id" come from 0 and means get logs which more than "id".   
 
-=head2 reg startup
 
-	{action:'',reg_startup=>1}
+=head2 reg or clear startup
+
+	{action:'',reg_startup:"1"}
+
 If reg_startup is true, this action will reg autorun with current manager port of opener_server.pl.
 
-=head2 reg default startup
+	{action:'clear_startup'} 
 
-	{action:'',reg_default_startup=>1}
+clear all startup code of current opener_server.pl process
+
+
+=head2 reg or clear default startup 
+
+	{action:'',reg_default_startup:"1"}
+
 If reg_default_startup is true, this action will reg autorun with all manager port of opener_server.pl as default run.
+
+	{action:'clear_default_startup'} 
+
+clear all default_startup code of all opener_server.pl process
+
 
 =head1 AUTHOR
 
@@ -1745,6 +1757,6 @@ If reg_default_startup is true, this action will reg autorun with all manager po
 
 =head1 WebSite
 
-    http://www.openerserver.com
+    https://www.openerserver.com
 
 =cut
