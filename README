@@ -1,22 +1,19 @@
-=pod
-
-=head1 NAME
+# NAME
 
 opener_server.pl - Http Container for run any code with http server.
  
-=head1 VERSION
+## VERSION
  
 Version 1.0
 
-=head1 SYNOPSIS
+## SYNOPSIS
  
  
     perl opener_server.pl 10008 0
     start a https server which listen on 10008 with built-in api.
     '0' means not autorun code in opener.conf.
- 
- 
-=head1 DESCRIPTION
+  
+## DESCRIPTION
 
 
     opener_server.pl is a http container. It's the implement of OPener_Server protocol.
@@ -27,9 +24,9 @@ Version 1.0
     You can connect programme lannguange with http.
  
 
-=head1 Manange API
+## Manange API
 
-=head2 http service manage
+### http service manage
 
 	{action:'new_http_server',port:"",ip:""}
 
@@ -43,7 +40,7 @@ start https server which listen on 'port' and 'ip' with certificate file is 'cer
 
 stop http or https server which listen on 'port' and 'ip'.
 
-=head2 register url to get new http api
+### register url to get new http api
 
 Host Example: host:"127.0.0.1:80" or host: "www.aa.com:443". If you need match all, use "*". Example: host:"*.80" to match all request on 80 port.
 Url Example: url:"/aa/11/22". If you need match all, use "*". Example: url:"/aa/*". 
@@ -85,7 +82,7 @@ reg a "url" with "host", the url point to a function which code is in "go". The 
 reg a "url" with "host", the url point to a function which code is in "remote_url".
 
 
-=head2 container service manage
+### container service manage
 
 	{action:'list_url',host:""}
 
@@ -131,14 +128,14 @@ start a new perl process to run "script". "script" should be utf8 encoding.
 start a new perl process to run "script". The script content is on a http location of "remote_url" 
 
 
-=head2 Get opener_server.pl log
+### Get opener_server.pl log
 
 	{action:'get_logs',id:""}
 
 Get the logs in opener_server.pl. "id" come from 0 and means get logs which more than "id".   
 
 
-=head2 reg or clear startup
+### reg or clear startup
 
 	{action:'',reg_startup:"1"}
 
@@ -149,7 +146,7 @@ If reg_startup is true, this action will reg autorun with current manager port o
 clear all startup code of current opener_server.pl process
 
 
-=head2 reg or clear default startup 
+### reg or clear default startup 
 
 	{action:'',reg_default_startup:"1"}
 
@@ -160,18 +157,17 @@ If reg_default_startup is true, this action will reg autorun with all manager po
 clear all default_startup code of all opener_server.pl process
 
 
-=head1 AUTHOR
+## AUTHOR
 
     Larry Wang "<a at openerserver.com>"
 
-=head1 License
+## License
 
     The Apache License
     Version 2.0, January 2004
     http://www.apache.org/licenses/
 
-=head1 WebSite
+## WebSite
 
     https://www.openerserver.com
 
-=cut
