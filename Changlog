@@ -1,3 +1,8 @@
+1.1.0	2016-12-22
+
+	Add a new action to set default_startup. 
+        It's for be easy to deploy on cloud service.
+
 1.0.2	2016-11-29
  
 	First released on the CPAN.
