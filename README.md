@@ -4,7 +4,7 @@ opener_server.pl - Http Container for run any code with http server.
  
 ## VERSION
  
-Version 1.0
+Version 1.1
 
 ## SYNOPSIS
  
