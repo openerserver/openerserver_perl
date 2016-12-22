@@ -109,7 +109,7 @@ quit the current opener_server.pl process.
 clear all injection code and registered url to get a clean opener_server.pl process(not recommend).
 
 
-=head2 code injection 
+### code injection 
 
 	{action:'code',code:""}
 
