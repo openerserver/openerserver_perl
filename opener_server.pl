@@ -1121,7 +1121,7 @@ $n->{start}=sub {
 	$self->{default_server_config}->{timeout}=30;
 	$self->{default_server_config}->{default_remote_url}='http://'.'remote.opzx.org'.'/';
 	$self->{default_server_config}->{max_form_data}=5000000;
-	$self->{default_server_config}->{opener_flag}='alexe';
+	$self->{default_server_config}->{opener_flag}='opener';
 	$self->{default_server_config}->{cert_remote_url}='^http(.*)\?opener(.*)\&file=(.*)';
 $self->{default_server_config}->{html_head}=<<'HEAD';
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"> 
@@ -1162,7 +1162,15 @@ GO
 $n->{reg_startup}=sub { ### name can be 'startup' or 'default_startup'
 	my $data=shift;
 	my $name=shift;
-	if ($data->{reg_startup}>0) {
+	my $test;
+	if ($name eq 'startup') {
+		$test='reg_startup';
+	}
+	if ($name eq 'default_startup') {
+		$test='reg_default_startup';
+	}
+
+	if ($data->{$test}>0) {
 		my $cal;
 		foreach  (sort keys %$data) {
 			$cal.=$_.$data->{$_};
@@ -1175,9 +1183,9 @@ $n->{reg_startup}=sub { ### name can be 'startup' or 'default_startup'
 		}
 		push @{$self->{$name}},$data;
 		$n->{write_startup}->();
-	}elsif ($data->{reg_startup}<0) {
+	}elsif ($data->{$test}<0) {
 		my $cal;
-		$data->{reg_startup}=1; ### fix to 1 for test md5
+		$data->{$test}=1; ### fix to 1 for test md5
 		foreach  (sort keys %$data) {
 			$cal.=$_.$data->{$_};
 		}
