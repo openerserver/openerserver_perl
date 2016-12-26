@@ -15,5 +15,11 @@ chmod a+x certbot-auto
 cat /etc/letsencrypt/keys/0000_key-certbot.pem >> $DOMAIN.pem
 cat /etc/letsencrypt/live/$DOMAIN/cert.pem > $DOMAIN.pem
 cat /etc/letsencrypt/live/$DOMAIN/fullchain.pem >> $DOMAIN.pem
-mv $DOMAIN.pem ../
+if [-d "../pems"]; then
+
+else
+mkdir "../cert_pems"
+fi
+
+mv $DOMAIN.pem ../cert_pems/
 
