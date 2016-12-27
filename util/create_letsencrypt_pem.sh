@@ -19,7 +19,7 @@ fi
 cat /etc/letsencrypt/keys/0000_key-certbot.pem >> $DOMAIN.pem
 cat /etc/letsencrypt/live/$DOMAIN/cert.pem > $DOMAIN.pem
 cat /etc/letsencrypt/live/$DOMAIN/fullchain.pem >> $DOMAIN.pem
-if [ -d "../pems" ]; then
+if [ -d "../cert_pems" ]; then
 mv $DOMAIN.pem ../cert_pems/
 else
 mkdir "../cert_pems"
