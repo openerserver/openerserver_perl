@@ -76,7 +76,7 @@ sub test_work_dir{
 
 $self->{log_count}=0;
 $self->{display_debug}=1;
-$self->{log_max_size}=1000000;
+$self->{log_max_size}=3000000;
 $self->{manager_port}=10008;
 
 if ($ARGV[0]>10008) {
@@ -1093,11 +1093,9 @@ $n->{op_sub}=sub {
 		my $last_id=$self->{log_count};
 		if ($data->{id}) {
 			my $ll={};
-			foreach  (sort {$b<=>$a} keys %{$self->{logs}}) {
+			foreach  (keys %{$self->{logs}}) {
 				if ($_>$data->{id}) {
 					$ll->{$_}=$self->{logs}->{$_};
-				}else{
-					last;
 				}
 			}
 			$n->{send_resp}->($r,$key, {url=>'/op',result=>'ok',action=>'get_logs',logs=>$ll,last_id=>$last_id});
@@ -1573,19 +1571,20 @@ $n->{logs}=sub {
 #	time.": $c\n" > io('opener.logs') if $self->{log_debug};
 	warn "$c" if $self->{display_debug};
 	$self->{log_count}++;
-	$self->{logs}->{$self->{log_count}}={'c'=>$c,'t'=>time,'s'=>length $c};
+	my $l=length $c;
+	$self->{logs}->{$self->{log_count}}={'c'=>$c,'t'=>time,'s'=>$l};
 	
-	$self->{log_size}+=length $c;
+	$self->{log_size}+=$l;
 	if ($self->{log_size}>$self->{log_max_size}) {
-		foreach  (sort {$a<=>$b} keys %{$self->{logs}}) {
-			$self->{log_size}-=$self->{logs}->{$_}->{s};
-			delete $self->{logs}->{$_};
-			if ($self->{log_size}<$self->{log_max_size}) {
-				last;
+		foreach  (keys %{$self->{logs}}) {
+			if (($self->{log_count}-$_)>10) { ### clear log to left max log is 10
+				$self->{log_size}-=$self->{logs}->{$_}->{s};
+				delete $self->{logs}->{$_};
 			}
 		}
 	}
 };
+
 
 
 $n->{start}->();
