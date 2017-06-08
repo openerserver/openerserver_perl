@@ -1433,12 +1433,12 @@ $n->{http_ajax_post}=sub{
 	  sub {
 		 my ($body, $hdr) = @_;
 		 if ($hdr->{Status} =~ /^2/) {
-			$data->{retry}=0;
 			$cb->(1,$body,$hdr);
 		 }elsif ($hdr->{Status} =~ /^4/) {
 			$cb->(0,$body,$hdr);
 		 }else{
 #			 $cb->(0,$body,$hdr);
+                        $n->{logs}->("retry $opener for $data->{retry}");
 			if ($hdr->{Status}==596) {
 				 $data->{opener}=$opener;
 				 unless (exists $data->{retry}) {
