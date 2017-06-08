@@ -1473,7 +1473,6 @@ $n->{http_get}=sub{
 	  sub {
 		 my ($body, $hdr) = @_;
 		 if ($hdr->{Status} =~ /^2/) {
-			$data->{retry}=0;
 			$cb->(1,$body,$hdr);
 		 }elsif ($hdr->{Status} =~ /^4/) {
 			$cb->(0,$body,$hdr);
