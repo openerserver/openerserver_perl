@@ -5,32 +5,32 @@ yum update
 apt-get -y install gcc make wget libssl-dev cpan
 yum -y install gcc make wget openssl-devel cpan
 
-cpan JSON::XS
-cpan DBD::SQLite
-cpan AnyEvent
-cpan EV
-cpan Digest::SHA1
-cpan Storable::AMF
-cpan Geo::IP::PurePerl
-cpan IP::QQWry
-cpan LWP::MediaTypes
-cpan HTTP::Parser2::XS
-cpan IO::All
-cpan URI::Escape::XS                  
-cpan AnyEvent::HTTP
-cpan DateTime
-cpan String::Random
-cpan Email::Valid
-cpan Net::DNS
-cpan Proc::Daemon
-cpan IO::Pty
-cpan Net::SSLeay
-cpan Net::DNS::ToolKit
-cpan AnyEvent::Fork
-cpan App::cpanminus
-cpan Net::Frame::Layer::DNS
-cpan Simple::IPInfo
-cpan Crypt::Passwd::XS
-cpan Net::Ifconfig::Wrapper
-cpan Net::IPAddress::Util
-cpan Net::Ping
+cpan -T JSON::XS
+cpan -T DBD::SQLite
+cpan -T AnyEvent
+cpan -T EV
+cpan -T Digest::SHA1
+cpan -T Storable::AMF
+cpan -T Geo::IP::PurePerl
+cpan -T IP::QQWry
+cpan -T LWP::MediaTypes
+cpan -T HTTP::Parser2::XS
+cpan -T IO::All
+cpan -T URI::Escape::XS                  
+cpan -T AnyEvent::HTTP
+cpan -T DateTime
+cpan -T String::Random
+cpan -T Email::Valid
+cpan -T Net::DNS
+cpan -T Proc::Daemon
+cpan -T IO::Pty
+cpan -T Net::SSLeay
+cpan -T Net::DNS::ToolKit
+cpan -T AnyEvent::Fork
+cpan -T App::cpanminus
+cpan -T Net::Frame::Layer::DNS
+cpan -T Simple::IPInfo
+cpan -T Crypt::Passwd::XS
+cpan -T Net::Ifconfig::Wrapper
+cpan -T Net::IPAddress::Util
+cpan -T Net::Ping
