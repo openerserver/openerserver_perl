@@ -333,8 +333,8 @@ $n->{process_uri}=sub {
 	}elsif($url_reg->{$host}->{$uri}->{type} eq 'file_root') {  ### root dir
 		my $file=$url_reg->{$host}->{$uri}->{go}.$r->{_uri};
 		if (-d $file) {	### if "go" is dir, it return index.html by default
-			if (-e $file.'\index.html') {
-				$n->{send_file}->($file.'\index.html',$r,$key);
+			if (-e $file.'/index.html') {
+				$n->{send_file}->($file.'/index.html',$r,$key);
 			}else{
 				$n->{send_response_error}->($r,$key,'404','not found:'.$r->{_request_uri});
 			}
